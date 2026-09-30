@@ -92,7 +92,7 @@ html[lang="ar"] .hero h1{font-weight:800;font-size:clamp(2.2rem,4.4vw,4.2rem);li
 .film-btn:hover{background:rgba(244,239,230,.24)}
 .film-btn svg{width:16px;height:16px}
 .film-btn span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
-@media (max-width:760px){.hero{height:auto;min-height:0}.hero video{position:relative;height:auto;aspect-ratio:16/9;margin-top:74px}.hero::after{display:none}.hero-copy{position:relative;inset:auto;padding:28px var(--gutter) 40px;flex-direction:column;align-items:flex-start}.film-ctrl{position:absolute;top:-58px;inset-inline-end:var(--gutter)}.film-btn{width:40px;height:40px}}
+@media (max-width:760px){.hero{height:auto;min-height:0}.hero video{position:relative;height:auto;aspect-ratio:16/9;margin-top:74px}.hero::after{display:none}.hero-copy{position:relative;inset:auto;padding:28px var(--gutter) 40px;flex-direction:column;align-items:flex-start}.film-ctrl{position:absolute;top:-58px;inset-inline-start:var(--gutter)}.film-btn{width:40px;height:40px}}
 
 section{position:relative;padding-block:clamp(88px,11vw,160px)}
 .light{background:var(--ivory);color:var(--ink)}
@@ -299,7 +299,7 @@ footer a{text-decoration:none}footer a:hover{color:var(--ivory)}
 
 <main id="main">
 <section class="hero" id="top" aria-labelledby="hero-title" style="padding:0">
-  <video id="film" autoplay muted loop playsinline preload="auto" poster="assets/hero-poster.jpg" aria-label="kmpndi film: a compound from the air, a resident sends a guest pass, the gate opens, the pool is booked and a family moves in.">
+  <video id="film" autoplay muted loop playsinline preload="auto" poster="assets/hero-poster.jpg" aria-label="kmpndi film: a compound from the air, the resident app creates a guest pass and shares it on WhatsApp, the guard app scans it as valid, the gate opens, the pool is booked and a family moves in.">
     <source src="assets/hero-720.mp4" type="video/mp4" media="(max-width: 760px)">
     <source src="assets/hero.mp4" type="video/mp4">
   </video>
@@ -339,8 +339,8 @@ footer a{text-decoration:none}footer a:hover{color:var(--ivory)}
 <section id="story" aria-label="How a visit works">
   <div class="wrap">
     <div class="chapter rise">
-      <div class="media"><img src="assets/stills/phone.jpg" alt="A resident sending a guest pass from his phone">
-        <div class="chip"><span class="label" data-i18n="v4.c1k">Guest pass · WhatsApp</span><div class="big" data-i18n="v4.c1b">Omar Adel · 18:00–23:00</div><small data-i18n="v4.c1s">Villa V-14 · Car ABC 123</small></div></div>
+      <div class="media"><img src="assets/stills/phone.jpg" alt="The kmpndi resident app showing a guest pass ready to share on WhatsApp" style="object-position:82% 50%">
+        <div class="chip" style="inset-inline-end:auto;inset-inline-start:clamp(12px,2vw,24px)"><span class="label" data-i18n="v4.c1k">Guest pass · WhatsApp</span><div class="big" data-i18n="v4.c1b">Omar Adel · 18:00–23:00</div><small data-i18n="v4.c1s">Villa V-14 · Car ABC 123</small></div></div>
       <div><h2 data-i18n="v4.c1t">Residents send the pass.</h2><p class="lede" data-i18n="v4.c1p">Guests, workers, deliveries and cars: residents create the pass in the app and send it on WhatsApp in seconds. Nobody calls the gate.</p>
         <ul class="ticks"><li data-i18n="v4.c1a">One-time, time-window or repeating passes</li><li data-i18n="v4.c1b2">Always within the resident's own access</li><li data-i18n="v4.c1c">Car plates in Arabic and English</li></ul></div>
     </div>
