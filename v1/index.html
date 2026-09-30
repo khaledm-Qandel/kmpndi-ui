@@ -1,0 +1,910 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>kmpndi — The compound that runs itself</title>
+<meta name="description" content="kmpndi turns your compound's map (zones, buildings, units, owners) into live gate access. Residents issue their own QR passes, guards scan, and facilities, shops and maintenance run on the same rights.">
+<meta name="theme-color" content="#121417">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23121417'/%3E%3Cpath d='M18 14h7v20l11-11h9L33 35l13 15h-9l-12-14v14h-7z' fill='%23E3EEE2'/%3E%3Ccircle cx='47' cy='15' r='6' fill='%23E0336F'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alexandria:wght@300..800&family=Archivo:wdth,wght@62..125,300..900&family=Martian+Mono:wdth,wght@75..112.5,300..700&display=swap">
+<link rel="preload" as="image" href="assets/hero-poster.jpg">
+<style>
+:root{
+  --paper:#E3EEE2; --paper-hi:#EEF4EC; --paper-lo:#D3E2D2; --rule:rgba(18,20,23,.16); --rule-strong:rgba(18,20,23,.32);
+  --ink:#121417; --ink-2:#1A2026; --ink-3:#252D34; --ink-soft:#4A524C; --on-ink:#E3EEE2; --on-ink-soft:#A9B6AB;
+  --magenta:#D6286A; --magenta-ink:#AE1A4F; --magenta-lit:#F4679A; --amber:#F2B233;
+  --display:"Archivo",system-ui,sans-serif; --text:"Archivo",system-ui,sans-serif; --mono:"Martian Mono",ui-monospace,monospace; --arabic:"Alexandria","Archivo",sans-serif;
+  --gutter:clamp(16px,4vw,56px); --max:1320px; --radius:18px;
+  --ease:cubic-bezier(.16,1,.3,1);
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:118px;-webkit-text-size-adjust:100%}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--text);font-size:clamp(16px,1.05vw,18px);line-height:1.55;font-stretch:100%;overflow-x:hidden;caret-color:var(--magenta)}
+html[lang="ar"] body{font-family:var(--arabic);line-height:1.75}
+::selection{background:var(--magenta);color:#fff}
+:focus-visible{outline:2.5px dashed var(--magenta);outline-offset:4px;border-radius:4px}
+html{scrollbar-color:var(--ink-3) var(--paper-lo)}
+::-webkit-scrollbar{width:12px}::-webkit-scrollbar-track{background:var(--paper-lo)}::-webkit-scrollbar-thumb{background:var(--ink-3);border:3px solid var(--paper-lo);border-radius:8px}
+a{color:inherit;text-underline-offset:.22em;text-decoration-thickness:1.5px}
+img,video,svg{display:block;max-width:100%}
+[hidden]{display:none!important}
+button{font:inherit;color:inherit}
+.wrap{max-width:var(--max);margin-inline:auto;padding-inline:var(--gutter)}
+.mono{font-family:var(--mono);font-stretch:88%;font-variant-numeric:tabular-nums}
+html[lang="ar"] .mono{font-family:var(--mono),var(--arabic)}
+.sr{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.skip{position:fixed;inset-inline-start:12px;top:-60px;z-index:100;background:var(--ink);color:var(--on-ink);padding:10px 14px;border-radius:8px}
+.skip:focus{top:12px}
+
+/* ── Type ── */
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;letter-spacing:-.02em;word-spacing:.08em}
+.today-close,.bilingual,.form-head .t{word-spacing:.08em}
+h2{font-weight:850;font-stretch:68%;font-size:clamp(2.6rem,6.2vw,5.6rem);line-height:.92}
+h3{font-weight:750;font-stretch:78%;font-size:clamp(1.3rem,1.8vw,1.6rem);line-height:1.08}
+html[lang="ar"] h1,html[lang="ar"] h2,html[lang="ar"] h3,html[lang="ar"] .today-close{font-family:var(--arabic);letter-spacing:0;font-stretch:100%;word-spacing:normal}
+html[lang="ar"] h2{font-weight:750;font-size:clamp(2.2rem,5vw,4.4rem);line-height:1.15}
+.lede{font-size:clamp(1.08rem,1.35vw,1.28rem);max-width:58ch;color:var(--ink-soft);margin:0}
+.lede strong{color:var(--ink);font-weight:650}
+.field-label{font-family:var(--mono);font-stretch:88%;font-size:max(.72rem,12px);letter-spacing:.14em;text-transform:uppercase;opacity:.62}
+html[lang="ar"] .field-label{letter-spacing:0;font-family:var(--arabic);font-size:.76rem;text-transform:none}
+
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:.6em;border:0;cursor:pointer;text-decoration:none;font-family:var(--display);font-weight:760;font-stretch:84%;font-size:1.05rem;padding:.95em 1.35em;border-radius:12px;transition:transform .35s var(--ease),background-color .25s,box-shadow .35s var(--ease)}
+html[lang="ar"] .btn{font-family:var(--arabic);font-weight:650}
+.btn svg{width:1.15em;height:1.15em;flex:none;transition:transform .35s var(--ease)}
+html[dir="rtl"] .btn svg.arrow{transform:scaleX(-1)}
+.btn:hover svg.arrow{transform:translateX(4px)}
+html[dir="rtl"] .btn:hover svg.arrow{transform:scaleX(-1) translateX(4px)}
+.btn:active{transform:translateY(1px) scale(.985)}
+.btn-ink{background:var(--ink);color:var(--on-ink)}
+.btn-ink:hover{background:var(--ink-3)}
+.btn-paper{background:var(--paper-hi);color:var(--ink)}
+.btn-paper:hover{background:#fff}
+.btn-ghost{background:transparent;color:inherit;box-shadow:inset 0 0 0 1.5px currentColor}
+.btn-ghost:hover{background:rgba(227,238,226,.12)}
+
+/* ── Nav: a ticket strip ── */
+.nav{position:fixed;inset:0 0 auto;z-index:50;transition:background-color .4s,box-shadow .4s,color .4s;color:var(--on-ink)}
+.nav.solid{background:rgba(227,238,226,.94);color:var(--ink);box-shadow:0 1px 0 var(--rule);backdrop-filter:saturate(1.2) blur(8px)}
+.nav-in{display:flex;align-items:center;gap:clamp(12px,2vw,28px);height:72px;max-width:none;padding-inline:var(--gutter)}
+.brand{display:inline-flex;align-items:baseline;text-decoration:none;font-family:var(--display);font-weight:900;font-stretch:72%;font-size:2rem;letter-spacing:-.035em;line-height:1}
+.brand .i{position:relative;display:inline-block}
+.brand .i::after{content:"";position:absolute;left:50%;top:.02em;width:.2em;height:.2em;border-radius:50%;background:var(--magenta);transform:translateX(-66%)}
+.nav-links{display:flex;gap:clamp(10px,1.6vw,26px);margin-inline-start:auto;font-size:.95rem}
+.nav-links a{text-decoration:none;opacity:.86;padding:6px 2px;position:relative}
+.nav-links a:hover{opacity:1}
+.nav-links a::after{content:"";position:absolute;inset-inline:0;bottom:0;height:1.5px;background:currentColor;transform:scaleX(0);transform-origin:left;transition:transform .35s var(--ease)}
+.nav-links a:hover::after{transform:scaleX(1)}
+.lang{border:0;background:transparent;cursor:pointer;padding:8px 12px;border-radius:10px;box-shadow:inset 0 0 0 1.5px currentColor;font-family:var(--arabic);font-weight:600;font-size:.95rem;min-width:64px}
+html[lang="ar"] .lang{font-family:var(--display);font-stretch:85%}
+.lang:hover{background:rgba(127,127,127,.12)}
+.nav .btn{padding:.7em 1.05em;font-size:.98rem;background:var(--magenta);color:#fff}
+.nav .btn:hover{background:#BC1F59}
+@media (max-width:980px){.nav-links{display:none}.lang{margin-inline-start:auto}}
+@media (max-width:520px){.nav .btn span{display:none}.nav .btn{padding:.7em}}
+
+/* ── Hero: the film fills the screen; a compact pass floats in its quiet bottom-left corner ── */
+.hero{position:relative;padding:0;height:100svh;min-height:600px;background:#0B0E11;color:var(--on-ink);overflow:hidden}
+.hero-grid{position:absolute;inset:0}
+.film-wrap{position:absolute;inset:0;background:#0B0E11}
+.hero-film{display:block;width:100%;height:100%;object-fit:cover;object-position:50% 0%;background:#0B0E11}
+.film-wrap::before{content:"";position:absolute;inset:0 0 auto;height:110px;z-index:1;background:linear-gradient(180deg,rgba(11,14,17,.75),rgba(11,14,17,0));pointer-events:none}
+.film-wrap::after{content:"";position:absolute;inset:0;background:radial-gradient(60% 70% at 0% 100%,rgba(11,14,17,.55),rgba(11,14,17,0) 70%);pointer-events:none}
+.hero-inner{position:absolute;z-index:2;left:var(--gutter);bottom:clamp(20px,4vh,44px);width:clamp(290px,20vw,350px)}
+.pass{position:relative;display:grid;grid-template-columns:1fr;filter:drop-shadow(0 24px 40px rgba(0,0,0,.55));animation:passIn 1s .5s var(--ease) both}
+@keyframes passIn{from{opacity:0;transform:translateY(28px) scale(.97)}to{opacity:1;transform:none}}
+.pass-body{position:relative;background:var(--paper);color:var(--ink);border-radius:20px 20px 0 0;padding:22px 22px 20px;overflow:hidden;
+  -webkit-mask:radial-gradient(circle 12px at 0 100%,#0000 98%,#000) bottom left/51% 100% no-repeat,radial-gradient(circle 12px at 100% 100%,#0000 98%,#000) bottom right/51% 100% no-repeat;
+          mask:radial-gradient(circle 12px at 0 100%,#0000 98%,#000) bottom left/51% 100% no-repeat,radial-gradient(circle 12px at 100% 100%,#0000 98%,#000) bottom right/51% 100% no-repeat}
+.pass-stub{position:relative;background:var(--magenta);color:#fff;border-radius:0 0 20px 20px;padding:18px 22px 20px;display:grid;grid-template-columns:1fr auto;grid-template-areas:"t q" "b b";gap:14px 12px;align-items:center;
+  -webkit-mask:radial-gradient(circle 12px at 0 0,#0000 98%,#000) top left/51% 100% no-repeat,radial-gradient(circle 12px at 100% 0,#0000 98%,#000) top right/51% 100% no-repeat;
+          mask:radial-gradient(circle 12px at 0 0,#0000 98%,#000) top left/51% 100% no-repeat,radial-gradient(circle 12px at 100% 0,#0000 98%,#000) top right/51% 100% no-repeat}
+.pass-stub::before{content:"";position:absolute;top:-1px;inset-inline:20px;border-top:2.5px dotted rgba(255,255,255,.75)}
+.stub-top{grid-area:t}
+.stub-meta{grid-area:q}
+.pass-stub .btn{grid-area:b}
+.stub-fields,.hero .pass-fields{display:none}
+.guilloche{position:absolute;pointer-events:none;color:var(--ink);opacity:.09}
+.pass-body .guilloche{width:380px;height:380px;inset-inline-end:-190px;top:-170px}
+.hero h1{position:relative;font-weight:900;font-stretch:64%;font-size:clamp(1.9rem,2.1vw,2.5rem);line-height:.94;letter-spacing:-.02em;word-spacing:.1em;max-width:none}
+html[lang="ar"] .hero h1{font-weight:800;font-size:clamp(1.6rem,1.8vw,2.05rem);line-height:1.3;letter-spacing:0}
+.hero .lede{position:relative;margin:10px 0 0;font-size:.9rem;line-height:1.5;max-width:none}
+.stub-top{font-family:var(--display);font-weight:800;font-stretch:72%;font-size:1.3rem;line-height:1.02}
+html[lang="ar"] .stub-top{font-family:var(--arabic);font-size:1.08rem;line-height:1.35}
+.stub-qr{width:52px;height:52px;padding:4px;border-radius:7px;background:rgba(255,255,255,.14)}
+.stub-qr svg{width:100%;height:100%}
+.pass-stub .btn{white-space:nowrap;font-stretch:74%;font-size:.98rem;padding:.8em 1em;justify-content:space-between;width:100%}
+.film-ctrl{position:absolute;top:88px;left:var(--gutter);display:flex;gap:8px;z-index:3}
+.film-btn{display:inline-flex;align-items:center;gap:8px;border:0;cursor:pointer;background:rgba(11,14,17,.62);color:var(--on-ink);padding:10px 14px;border-radius:999px;box-shadow:inset 0 0 0 1px rgba(227,238,226,.3);font-family:var(--mono);font-stretch:88%;font-size:12px;letter-spacing:.1em;text-transform:uppercase}
+html[lang="ar"] .film-btn{font-family:var(--arabic);letter-spacing:0;text-transform:none;font-size:.85rem}
+.film-btn:hover{background:rgba(11,14,17,.85)}
+.film-btn svg{width:14px;height:14px}
+@media (max-height:640px) and (min-width:901px){.hero .lede{display:none}}
+@media (max-width:900px){
+  .hero{height:auto;min-height:0;padding-bottom:28px}
+  .hero-grid{position:static;display:flex;flex-direction:column}
+  .film-wrap{position:relative;order:-1;inset:auto}
+  .film-wrap::after{background:linear-gradient(0deg,#0B0E11,rgba(11,14,17,0) 28%)}
+  .hero-film{height:auto;aspect-ratio:4/5;margin-top:72px}
+  .hero-inner{position:relative;left:auto;bottom:auto;width:auto;padding-inline:var(--gutter);margin-top:-26px}
+  .hero .lede{font-size:1rem}
+  .hero h1{font-size:clamp(2.2rem,9vw,2.8rem)}
+  .film-ctrl{top:84px;left:auto;right:var(--gutter)}
+  .film-btn span{display:none}
+  .film-btn{padding:11px}
+}
+
+/* ── Validity bar: the page's ruling axis, a pass window under the nav ── */
+.rail{max-height:0;overflow:hidden;transition:max-height .45s var(--ease)}
+.nav.solid .rail{max-height:44px}
+.rail ol{list-style:none;margin:0;padding:0 var(--gutter) 9px;display:flex;gap:4px}
+.rail li{flex:1 1 0;min-width:0;transition:flex-grow .45s var(--ease)}
+.rail li.on{flex-grow:2.4}
+.rail a{display:block;text-decoration:none;color:var(--ink-soft);padding-top:6px;padding-inline-end:12px;border-top:3px solid var(--rule);font-family:var(--mono);font-stretch:85%;font-size:12px;letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:border-color .3s,color .3s}
+html[lang="ar"] .rail a{font-family:var(--arabic);letter-spacing:0}
+.rail a:hover{color:var(--ink)}
+.rail .dot{display:none}
+.rail li.done a{border-top-color:var(--ink)}
+.rail li.on a{border-top-color:var(--amber);color:var(--ink);font-weight:600}
+@media (max-width:1180px){.rail li:not(.on) a{font-size:0;min-height:22px}}
+@media (max-width:760px){.rail li.on{flex-grow:7}.rail li:not(.on) a{font-size:0;min-height:22px}}
+
+/* ── Sections ── */
+section{position:relative;padding-block:clamp(88px,12vw,168px)}
+.sec-head{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:clamp(24px,5vw,80px);align-items:end;margin-bottom:clamp(44px,6vw,80px)}
+.sec-head .lede{padding-bottom:.4em}
+@media (max-width:900px){.sec-head{grid-template-columns:1fr;gap:20px}}
+.stamp{display:inline-block;border:3px solid currentColor;border-radius:10px;padding:.1em .45em;font-family:var(--display);font-weight:900;font-stretch:70%;letter-spacing:.05em;text-transform:uppercase;transform:rotate(-8deg);line-height:1.1}
+html[lang="ar"] .stamp{font-family:var(--arabic);font-weight:800;letter-spacing:0}
+.stamp.slam{animation:slam .5s var(--ease) both}
+@keyframes slam{from{opacity:0;transform:rotate(-8deg) scale(1.9)}60%{opacity:1}to{opacity:1;transform:rotate(-8deg) scale(1)}}
+
+/* The gate today: dead passes */
+.today{background:var(--paper-lo)}
+.dead-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}
+@media (max-width:1100px){.dead-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.dead-grid{grid-template-columns:1fr}}
+.dead{position:relative;background:var(--paper-hi);border-radius:14px;padding:22px 22px 70px;min-height:230px;display:flex;flex-direction:column;box-shadow:0 1px 0 var(--rule),0 18px 30px -22px rgba(18,20,23,.35)}
+.dead::after{content:"";position:absolute;inset-inline:18px;top:72px;border-top:2px dashed var(--rule)}
+.dead .who{font-family:var(--mono);font-stretch:88%;font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft)}
+html[lang="ar"] .dead .who{font-family:var(--arabic);letter-spacing:0;text-transform:none;font-size:.85rem}
+.dead h3{margin-top:44px;text-decoration:line-through;text-decoration-color:var(--magenta);text-decoration-thickness:2px;color:var(--ink-soft)}
+.dead p{margin:10px 0 0;font-size:.95rem;color:var(--ink-soft)}
+.dead .stamp{position:absolute;inset-inline-end:18px;bottom:18px;color:var(--magenta-ink);font-size:1.25rem}
+.today-close{margin-top:clamp(40px,5vw,64px);font-family:var(--display);font-weight:800;font-stretch:72%;font-size:clamp(1.6rem,3vw,2.6rem);line-height:1.12;max-width:26ch}
+html[lang="ar"] .today-close{font-family:var(--arabic);font-weight:700;line-height:1.4}
+.today-close em{font-style:normal;color:var(--magenta-ink)}
+
+/* Inheritance map (signature interaction) */
+.inherit{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(300px,1fr);gap:clamp(20px,3vw,40px);align-items:start}
+@media (max-width:1000px){.inherit{grid-template-columns:1fr}}
+.plan{position:relative;background:var(--ink);color:var(--on-ink);border-radius:22px;padding:clamp(16px,2vw,26px);overflow:hidden}
+.plan-hint{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:14px;color:var(--on-ink-soft)}
+.plan-hint .field-label{opacity:1}
+.zone{position:relative;border:1.5px dashed rgba(227,238,226,.38);border-radius:14px;padding:30px 12px 12px;transition:border-color .35s,background-color .35s,box-shadow .35s}
+.zone>.zl{position:absolute;top:7px;inset-inline-start:12px;font-family:var(--mono);font-stretch:85%;font-size:max(.7rem,12px);letter-spacing:.12em;text-transform:uppercase;color:var(--on-ink-soft);display:flex;gap:8px;align-items:center}
+html[lang="ar"] .zone>.zl{font-family:var(--arabic);letter-spacing:0;text-transform:none;font-size:.8rem}
+.zone.lit{border-color:var(--magenta);border-style:solid;background:rgba(214,40,106,.08);box-shadow:inset 0 0 0 1px rgba(214,40,106,.4)}
+.zone.lit>.zl{color:var(--magenta-lit)}
+.gate-mark{display:inline-flex;align-items:center;gap:6px;padding:2px 7px;border-radius:5px;background:rgba(227,238,226,.1);transition:background-color .35s,color .35s}
+.zone.lit>.zl .gate-mark{background:var(--magenta);color:#fff}
+.plan-grid{display:grid;grid-template-columns:1.1fr 1.4fr;gap:12px}
+.plan-col{display:grid;gap:12px;align-content:start}
+@media (max-width:620px){.plan-grid{grid-template-columns:1fr}}
+.units{display:flex;flex-wrap:wrap;gap:8px}
+.unit{appearance:none;border:0;cursor:pointer;min-width:62px;padding:12px 10px;border-radius:9px;background:var(--ink-3);color:var(--on-ink);font-family:var(--mono);font-stretch:85%;font-size:.8rem;font-weight:500;transition:background-color .25s,transform .25s var(--ease),box-shadow .25s}
+.unit:hover{background:#34404A;transform:translateY(-2px)}
+.unit[aria-pressed="true"]{background:var(--magenta);color:#fff;box-shadow:0 0 0 4px rgba(214,40,106,.3)}
+.unit.pool{background:rgba(111,184,172,.22);color:#BFE5DE;cursor:pointer}
+.unit.pool[aria-pressed="true"]{background:#6FB8AC;color:var(--ink);box-shadow:0 0 0 4px rgba(111,184,172,.3)}
+.unit.shop{background:rgba(242,178,51,.16);color:#F7D48A}
+.unit.shop[aria-pressed="true"]{background:var(--amber);color:var(--ink);box-shadow:0 0 0 4px rgba(242,178,51,.3)}
+.grant{position:sticky;top:96px}
+.grant-card{position:relative;background:var(--paper-hi);border-radius:20px;padding:26px;box-shadow:0 1px 0 var(--rule),0 30px 50px -30px rgba(18,20,23,.4);overflow:hidden}
+.grant-card .guilloche{width:360px;height:360px;inset-inline-end:-150px;bottom:-150px}
+.grant-card h3{font-size:clamp(1.8rem,2.6vw,2.4rem);font-stretch:70%;font-weight:850;position:relative}
+.opens{list-style:none;margin:18px 0 0;padding:0;position:relative}
+.opens li{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1.5px dashed var(--rule);animation:rowin .45s var(--ease) both}
+.opens li:nth-child(2){animation-delay:.06s}.opens li:nth-child(3){animation-delay:.12s}.opens li:nth-child(4){animation-delay:.18s}.opens li:nth-child(5){animation-delay:.24s}
+@keyframes rowin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.opens .tick{flex:none;width:22px;height:22px;border-radius:50%;background:var(--magenta);display:grid;place-items:center}
+.opens .tick svg{width:12px;height:12px}
+.opens .why{margin-inline-start:auto;font-family:var(--mono);font-stretch:85%;font-size:12px;color:var(--ink-soft);text-align:end}
+html[lang="ar"] .opens .why{font-family:var(--arabic);font-size:.78rem}
+.grant-note{position:relative;margin:18px 0 0;font-size:.92rem;color:var(--ink-soft)}
+
+/* Pass strip */
+.passes{background:var(--ink);color:var(--on-ink)}
+.passes .lede{color:var(--on-ink-soft)}
+.passes .lede strong{color:var(--on-ink)}
+.strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;padding-block:10px 30px}
+@media (max-width:1180px){.strip{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:860px){.strip{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:540px){.strip{grid-template-columns:1fr}}
+.tk{position:relative;background:var(--paper);color:var(--ink);border-radius:16px;padding:20px 20px 18px;display:flex;flex-direction:column;min-height:350px;transition:transform .45s var(--ease)}
+.tk:hover{transform:translateY(-6px) rotate(-.6deg)}
+.tk .top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.tk .cls{font-family:var(--mono);font-stretch:85%;font-size:12px;letter-spacing:.14em;text-transform:uppercase;padding:5px 8px;border-radius:5px;background:var(--ink);color:var(--on-ink)}
+html[lang="ar"] .tk .cls{font-family:var(--arabic);letter-spacing:0;text-transform:none;font-size:.8rem}
+.tk h3{margin-top:18px;font-size:1.9rem;font-stretch:68%;font-weight:850}
+html[lang="ar"] .tk h3{font-size:1.5rem}
+.tk .rows{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px;margin-top:14px}
+.tk .rows .v{font-family:var(--mono);font-stretch:85%;font-size:.8rem;font-weight:500;margin-top:2px}
+html[lang="ar"] .tk .rows .v{font-family:var(--arabic);font-size:.86rem}
+.tk .perf{margin:18px -20px 16px;border-top:2.5px dashed var(--rule-strong);position:relative}
+.tk .perf::before,.tk .perf::after{content:"";position:absolute;top:-13px;width:24px;height:24px;border-radius:50%;background:var(--ink)}
+.tk .perf::before{left:-12px}.tk .perf::after{right:-12px}
+.tk .foot{margin-top:auto;display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+.tk .qr{width:92px;height:92px;flex:none}
+.tk .window{font-family:var(--mono);font-stretch:85%;font-size:.74rem;line-height:1.45}
+html[lang="ar"] .tk .window{font-family:var(--arabic);font-size:.82rem}
+.tk .bar{height:6px;border-radius:3px;background:var(--paper-lo);position:relative;margin-top:8px;overflow:hidden}
+.tk .bar i{position:absolute;inset-block:0;border-radius:3px;background:var(--amber)}
+html[dir="rtl"] .tk .bar{transform:scaleX(-1)}
+.plate{display:inline-grid;grid-template-columns:auto auto;border:2px solid var(--ink);border-radius:6px;overflow:hidden;font-weight:600;margin-top:4px}
+.plate span{padding:3px 8px;font-family:var(--mono);font-stretch:85%;font-size:.8rem}
+.plate span+span{font-family:var(--arabic);border-inline-start:2px solid var(--ink);font-size:.86rem}
+.plate::before{content:"";grid-column:1/-1;height:8px;background:#5AA1D6}
+.tk.dead-tk{background:#C9D6C8}
+.tk.dead-tk h3,.tk.dead-tk .rows{opacity:.55}
+.tk.dead-tk .qr{opacity:.25}
+.tk .stamp{position:absolute;top:118px;inset-inline-end:16px;font-size:1.5rem;color:var(--magenta-ink);background:rgba(227,238,226,.7)}
+.tk.pending .stamp{color:#8A5A00}
+.strip-hint{display:flex;align-items:center;gap:10px;color:var(--on-ink-soft);font-size:.9rem;margin-top:4px}
+
+/* Ownership chain */
+.chain{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;counter-reset:step;position:relative}
+@media (max-width:1000px){.chain{grid-template-columns:1fr 1fr;gap:18px}}
+@media (max-width:560px){.chain{grid-template-columns:1fr}}
+.link{position:relative;padding:26px 26px 28px;background:var(--paper-hi);border-inline-end:2.5px dashed var(--rule-strong)}
+.link:first-child{border-radius:18px 0 0 18px}
+.link:last-child{border-radius:0 18px 18px 0;border-inline-end:0;background:var(--ink);color:var(--on-ink)}
+html[dir="rtl"] .link:first-child{border-radius:0 18px 18px 0}
+html[dir="rtl"] .link:last-child{border-radius:18px 0 0 18px}
+@media (max-width:1000px){.link,.link:first-child,.link:last-child,html[dir="rtl"] .link:first-child,html[dir="rtl"] .link:last-child{border-radius:18px;border-inline-end:0}}
+.link .when{font-family:var(--mono);font-stretch:85%;font-size:.72rem;letter-spacing:.1em;color:var(--ink-soft)}
+html[lang="ar"] .link .when{font-family:var(--arabic);letter-spacing:0;font-size:.82rem}
+.link:last-child .when{color:var(--on-ink-soft)}
+.link h3{margin-top:14px}
+.link p{margin:10px 0 0;font-size:.95rem;color:var(--ink-soft)}
+.link:last-child p{color:var(--on-ink-soft)}
+.holder{display:flex;align-items:center;gap:10px;margin-top:18px;padding:10px 12px;border-radius:10px;background:var(--paper);font-size:.9rem}
+.link:last-child .holder{background:var(--ink-3)}
+.holder .av{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-family:var(--mono);font-size:.7rem;font-weight:600;background:var(--ink);color:var(--on-ink);flex:none}
+.link:last-child .holder .av{background:var(--magenta)}
+.fan{display:flex;margin-top:10px;gap:6px;flex-wrap:wrap}
+.fan span{font-family:var(--mono);font-stretch:85%;font-size:12px;padding:4px 7px;border-radius:5px;border:1.5px solid var(--rule-strong)}
+html[lang="ar"] .fan span{font-family:var(--arabic);font-size:.78rem}
+.audit{margin-top:22px;display:flex;flex-wrap:wrap;gap:8px 22px;align-items:center;font-family:var(--mono);font-stretch:85%;font-size:.76rem;color:var(--ink-soft)}
+html[lang="ar"] .audit{font-family:var(--arabic);font-size:.86rem}
+.audit b{color:var(--ink);font-weight:600}
+.example-note{font-size:.82rem;color:var(--ink-soft);margin-top:14px}
+
+/* Capability modules: hairline dense grid */
+.modules{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1.5px solid var(--ink);border-inline-start:1.5px solid var(--ink)}
+@media (max-width:1100px){.modules{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:760px){.modules{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:460px){.modules{grid-template-columns:1fr}}
+.mod{position:relative;border-inline-end:1.5px solid var(--ink);border-bottom:1.5px solid var(--ink);padding:18px 18px 22px;min-height:190px;transition:background-color .3s}
+.mod:hover{background:var(--paper-hi)}
+.mod svg.ic{display:block;width:32px;height:32px;stroke:var(--ink);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;margin-bottom:26px}
+.mod.hot svg.ic{stroke:var(--magenta-ink)}.mod.fac svg.ic{stroke:#2F7F73}.mod.mkt svg.ic{stroke:#8A5A00}
+.mod h3{font-size:1.3rem}
+.mod p{margin:8px 0 0;font-size:.92rem;color:var(--ink-soft);line-height:1.5}
+
+/* Apps as pass classes */
+.apps{background:var(--ink);color:var(--on-ink)}
+.apps .lede{color:var(--on-ink-soft)}
+.class-list{display:grid;gap:14px}
+.cls-row{display:grid;grid-template-columns:120px minmax(0,1fr) minmax(0,1.3fr) 176px;align-items:center;gap:clamp(16px,3vw,36px);background:var(--ink-2);border-radius:16px;padding:22px 26px;position:relative;transition:background-color .3s}
+.cls-row:hover{background:var(--ink-3)}
+.cls-row::after{content:"";position:absolute;inset-block:14px;inset-inline-end:200px;border-inline-start:2.5px dashed rgba(227,238,226,.22)}
+.cls-row .code{font-family:var(--display);font-weight:900;font-stretch:65%;font-size:3.2rem;line-height:.9;color:var(--amber)}
+.cls-row h3{font-size:1.5rem}
+.cls-row .who{margin:4px 0 0;color:var(--on-ink-soft);font-size:.92rem}
+.cls-row .does{margin:0;color:var(--on-ink-soft);font-size:.92rem}
+.cls-row .dev{justify-self:end;font-family:var(--mono);font-stretch:85%;font-size:12px;letter-spacing:.12em;text-transform:uppercase;text-align:center;padding:8px 12px;border-radius:6px;box-shadow:inset 0 0 0 1.5px rgba(227,238,226,.35);min-width:130px;white-space:nowrap}
+html[lang="ar"] .cls-row .dev{font-family:var(--arabic);letter-spacing:0;text-transform:none;font-size:.82rem}
+@media (max-width:900px){.cls-row{grid-template-columns:70px 1fr;padding:20px}.cls-row .does{grid-column:1/-1}.cls-row .dev{grid-column:1/-1;justify-self:start}.cls-row::after{display:none}.cls-row .code{font-size:2.4rem}}
+
+/* Made for Egypt */
+.egypt-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:clamp(30px,6vw,90px);align-items:start}
+@media (max-width:900px){.egypt-grid{grid-template-columns:1fr}}
+.bilingual{font-family:var(--display);font-weight:900;font-stretch:64%;font-size:clamp(3.4rem,9vw,8rem);line-height:.86;letter-spacing:-.03em}
+.bilingual .ar{display:block;font-family:var(--arabic);font-weight:800;font-stretch:100%;letter-spacing:0;font-size:.62em;line-height:1.3;color:var(--magenta-ink);margin-top:.15em}
+.truths{list-style:none;margin:0;padding:0;border-top:1.5px solid var(--ink)}
+.truths li{display:grid;grid-template-columns:44px 1fr;gap:16px;padding:20px 0;border-bottom:1.5px dashed var(--rule-strong)}
+.truths svg{width:30px;height:30px;stroke:var(--ink);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;margin-top:2px}
+.truths h3{font-size:1.25rem}
+.truths p{margin:4px 0 0;color:var(--ink-soft);font-size:.95rem}
+
+/* Contact: drenched magenta */
+.contact{background:var(--magenta);color:#fff;overflow:hidden}
+.contact .guilloche{color:#fff;opacity:.13;width:1100px;height:1100px;inset-inline-start:-420px;top:-260px}
+.contact h2{color:#fff;max-width:12ch}
+.contact .lede{color:rgba(255,255,255,.9)}
+.contact-grid{position:relative;display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.3fr);gap:clamp(30px,5vw,80px);align-items:start}
+@media (max-width:980px){.contact-grid{grid-template-columns:1fr}}
+.direct{margin-top:30px;display:grid;gap:10px;font-size:1rem}
+.direct a{font-weight:600}
+.form{position:relative;background:var(--paper);color:var(--ink);border-radius:22px;padding:clamp(22px,3vw,38px);box-shadow:0 40px 80px -40px rgba(60,0,20,.6)}
+.form::before{content:"";position:absolute;inset-inline:26px;top:-1px;border-top:2.5px dashed rgba(18,20,23,.2)}
+.form-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:20px;padding-bottom:14px;border-bottom:1.5px dashed var(--rule-strong)}
+.form-head .t{font-family:var(--display);font-weight:850;font-stretch:70%;font-size:1.7rem;line-height:1}
+html[lang="ar"] .form-head .t{font-family:var(--arabic);font-weight:700;font-size:1.4rem}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px 18px}
+.fgrid .full{grid-column:1/-1}
+@media (max-width:560px){.fgrid{grid-template-columns:1fr}}
+.f label{display:block;margin-bottom:6px}
+.f input,.f select,.f textarea{width:100%;font:inherit;font-size:1rem;color:var(--ink);background:var(--paper-hi);border:1.5px solid var(--rule-strong);border-radius:10px;padding:12px 14px;transition:border-color .2s,box-shadow .2s,background-color .2s;accent-color:var(--magenta)}
+.f textarea{min-height:110px;resize:vertical}
+.f input::placeholder,.f textarea::placeholder{color:#6B736D}
+.f input:hover,.f select:hover,.f textarea:hover{border-color:var(--ink)}
+.f input:focus,.f select:focus,.f textarea:focus{outline:none;border-color:var(--ink);background:#fff;box-shadow:0 0 0 4px rgba(214,40,106,.22)}
+.f.bad input,.f.bad select,.f.bad textarea{border-color:var(--magenta-ink);background:#FFF3F7}
+.f .err{display:none;margin-top:6px;font-size:.84rem;color:var(--magenta-ink);font-weight:600}
+.f.bad .err{display:block}
+.f select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23121417' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;background-size:18px;padding-inline-end:40px}
+html[dir="rtl"] .f select{background-position:left 12px center}
+.form-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;margin-top:22px}
+.form-foot small{color:var(--ink-soft);max-width:34ch}
+.btn-go{background:var(--ink);color:var(--on-ink)}
+.btn-go:hover{background:var(--magenta)}
+.btn-go[disabled]{opacity:.55;cursor:progress}
+.sent{display:none;text-align:start}
+.form.done .sent{display:block;animation:rowin .5s var(--ease) both}
+.form.done form{display:none}
+.sent .stamp{color:var(--magenta-ink);font-size:2.2rem;margin-bottom:18px}
+.sent h3{font-size:2rem;font-stretch:70%;font-weight:850}
+.sent p{color:var(--ink-soft)}
+
+/* Footer */
+footer{background:var(--ink);color:var(--on-ink-soft);padding-block:44px;font-size:.9rem}
+footer .wrap{display:flex;flex-wrap:wrap;gap:18px 40px;align-items:center;justify-content:space-between}
+footer .brand{color:var(--on-ink);font-size:2.4rem}
+footer nav{display:flex;flex-wrap:wrap;gap:8px 22px}
+footer a{text-decoration:none}
+footer a:hover{color:var(--on-ink);text-decoration:underline}
+
+/* Reveal: content visible by default, enhanced only when JS runs */
+.js .rise{opacity:0;transform:translateY(22px);transition:opacity .8s var(--ease),transform .8s var(--ease)}
+.js .rise.in{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){.js .rise{opacity:1;transform:none}.pass{animation:none}}
+</style>
+</head>
+<body>
+<a class="skip" href="#main" data-i18n="skip">Skip to content</a>
+
+<header class="nav" id="nav">
+  <div class="nav-in">
+    <a class="brand" href="#top" dir="ltr" aria-label="kmpndi home">kmpnd<span class="i">ı</span></a>
+    <nav class="nav-links" aria-label="Main">
+      <a href="#how" data-i18n="nav.how">How it works</a>
+      <a href="#passes" data-i18n="nav.passes">Passes</a>
+      <a href="#everything" data-i18n="nav.all">The whole compound</a>
+      <a href="#apps" data-i18n="nav.apps">Apps</a>
+    </nav>
+    <button class="lang" id="lang" type="button" aria-label="التبديل إلى العربية">عربي</button>
+    <a class="btn" href="#contact"><span data-i18n="nav.cta">Talk to us</span><svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+  </div>
+  <nav class="rail" id="rail" aria-label="Page sections">
+  <ol>
+    <li><a href="#top"><span class="dot"></span><span class="lbl" data-i18n="rail.gate">The gate</span></a></li>
+    <li><a href="#today"><span class="dot"></span><span class="lbl" data-i18n="rail.today">Today</span></a></li>
+    <li><a href="#how"><span class="dot"></span><span class="lbl" data-i18n="rail.map">Map once</span></a></li>
+    <li><a href="#passes"><span class="dot"></span><span class="lbl" data-i18n="rail.passes">Passes</span></a></li>
+    <li><a href="#ownership"><span class="dot"></span><span class="lbl" data-i18n="rail.own">Ownership</span></a></li>
+    <li><a href="#everything"><span class="dot"></span><span class="lbl" data-i18n="rail.all">Everything</span></a></li>
+    <li><a href="#apps"><span class="dot"></span><span class="lbl" data-i18n="rail.apps">Four apps</span></a></li>
+    <li><a href="#egypt"><span class="dot"></span><span class="lbl" data-i18n="rail.egypt">Egypt</span></a></li>
+    <li><a href="#contact"><span class="dot"></span><span class="lbl" data-i18n="rail.contact">Talk to us</span></a></li>
+  </ol>
+</nav>
+</header>
+
+<main id="main">
+<!-- ═════════════ HERO ═════════════ -->
+<section class="hero" id="top" data-dark aria-labelledby="hero-title">
+  <div class="hero-grid">
+  <div class="hero-inner">
+    <div class="pass">
+      <div class="pass-body">
+        <svg class="guilloche" viewBox="-260 -260 520 520" aria-hidden="true" data-rosette="18"></svg>
+        <h1 id="hero-title" data-i18n="hero.title">The compound that runs itself.</h1>
+        <p class="lede" data-i18n-html="hero.lede">kmpndi turns your compound's map (zones, buildings, units, owners) into live gate access. <strong>Residents issue their own QR passes. Guards scan. You stop managing lists.</strong></p>
+        <div class="pass-fields">
+          <div><div class="field-label" data-i18n="hero.f1">Holder</div><div class="v" data-i18n="hero.v1">Property developers</div></div>
+          <div><div class="field-label" data-i18n="hero.f2">Covers</div><div class="v" data-i18n="hero.v2">Gates · zones · buildings · units</div></div>
+          <div><div class="field-label" data-i18n="hero.f3">Works with</div><div class="v" data-i18n="hero.v3">QR · NFC · guard's phone</div></div>
+        </div>
+      </div>
+      <div class="pass-stub">
+        <div class="stub-top"><span data-i18n="hero.stub">Book your onboarding</span></div>
+        <div class="stub-meta">
+          <div class="stub-fields">
+            <div><div class="field-label" data-i18n="hero.sf1">Admit</div><div class="v" data-i18n="hero.sv1">One compound</div></div>
+            <div><div class="field-label" data-i18n="hero.sf3">Valid</div><div class="v" data-i18n="hero.sv3">24 / 7</div></div>
+          </div>
+          <div class="stub-qr" data-qr="77"></div>
+        </div>
+        <a class="btn btn-paper" href="#contact"><span data-i18n="hero.cta">Talk to the kmpndi team</span><svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      </div>
+    </div>
+  </div>
+  <div class="film-wrap">
+    <video class="hero-film" id="film" autoplay muted loop playsinline preload="auto" poster="assets/hero-poster.jpg" aria-label="kmpndi film: a resident issues a guest pass, the guard scans it, the barrier lifts, and access lights up from the gate to the unit.">
+    <source src="assets/hero-mobile.mp4" type="video/mp4" media="(max-width: 900px)">
+    <source src="assets/hero.mp4" type="video/mp4">
+  </video>
+    <div class="film-ctrl">
+      <button class="film-btn" id="filmToggle" type="button" aria-pressed="false">
+        <svg id="icPause" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+        <svg id="icPlay" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" hidden><path d="M7 5l12 7-12 7z"/></svg>
+        <span data-i18n="film.pause">Pause film</span>
+      </button>
+      <button class="film-btn" id="filmFull" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+        <span data-i18n="film.full">Watch the film</span>
+      </button>
+    </div>
+  </div>
+  </div>
+</section>
+
+<!-- ═════════════ THE GATE TODAY ═════════════ -->
+<section class="today" id="today" aria-labelledby="today-title">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2 id="today-title" class="rise" data-i18n="today.title">Your gate still runs on paper.</h2>
+      <p class="lede rise" data-i18n="today.lede">Guest lists on WhatsApp. Worker cards nobody checks. Tenants who moved out months ago and still wave their way in. The guard does their best with what they're given, and what they're given is guesswork.</p>
+    </div>
+    <div class="dead-grid">
+      <article class="dead rise"><span class="stamp" data-i18n="today.s1">Unreadable</span><div class="who" data-i18n="today.w1">Guest · 21:10</div><h3 data-i18n="today.h1">A blurry photo of an ID card</h3><p data-i18n="today.p1">Forwarded three times on WhatsApp. The guard can't tell whose guest it is.</p></article>
+      <article class="dead rise"><span class="stamp" data-i18n="today.s2">Expired</span><div class="who" data-i18n="today.w2">Worker · 07:45</div><h3 data-i18n="today.h2">A laminated card from last year</h3><p data-i18n="today.p2">The contract ended, but the card still gets a nod at the gate.</p></article>
+      <article class="dead rise"><span class="stamp" data-i18n="today.s3">Revoked?</span><div class="who" data-i18n="today.w3">Former tenant · 18:30</div><h3 data-i18n="today.h3">A face the guard remembers</h3><p data-i18n="today.p3">The lease ended in spring. Nobody told the gate.</p></article>
+      <article class="dead rise"><span class="stamp" data-i18n="today.s4">Unknown</span><div class="who" data-i18n="today.w4">Delivery · 13:05</div><h3 data-i18n="today.h4">Three calls to three villas</h3><p data-i18n="today.p4">Nobody answers, the order waits at the barrier, and the resident is angry.</p></article>
+    </div>
+    <p class="today-close rise" data-i18n-html="today.close">kmpndi replaces the guesswork with <em>one rule the gate can check</em>: who owns or lives in the unit, and who they said may come in.</p>
+  </div>
+</section>
+
+<!-- ═════════════ MAP ONCE: INHERITANCE ═════════════ -->
+<section id="how" aria-labelledby="how-title">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2 id="how-title" class="rise" data-i18n="how.title">Map it once. Access inherits.</h2>
+      <p class="lede rise" data-i18n-html="how.lede">You draw your compound in the admin app: gates, zones inside zones, buildings, units. <strong>Grant a unit and kmpndi opens its building, every zone around it, and the main gate.</strong> Try it: pick a unit.</p>
+    </div>
+    <div class="inherit">
+      <div class="plan rise" aria-label="Example compound plan">
+        <div class="plan-hint"><span class="field-label" data-i18n="how.hint">Example compound · pick a unit</span><span class="field-label mono">NEW CAIRO · DEMO</span></div>
+        <div class="zone" data-z="gc">
+          <div class="zl"><span class="gate-mark" data-i18n="how.gc">Compound · Main gate A</span></div>
+          <div class="plan-grid">
+            <div class="plan-col">
+              <div class="zone" data-z="twr">
+                <div class="zl"><span class="gate-mark" data-i18n="how.twr">Tower A2 · lobby door</span></div>
+                <div class="units" role="group" aria-label="Tower A2 units">
+                  <button class="unit" type="button" data-u="A2-3" aria-pressed="false">A2-3</button>
+                  <button class="unit" type="button" data-u="A2-7" aria-pressed="false">A2-7</button>
+                  <button class="unit" type="button" data-u="A2-12" aria-pressed="false">A2-12</button>
+                  <button class="unit" type="button" data-u="A2-18" aria-pressed="false">A2-18</button>
+                </div>
+              </div>
+              <div class="zone" data-z="club">
+                <div class="zl"><span class="gate-mark" data-i18n="how.club">Clubhouse · facilities</span></div>
+                <div class="units">
+                  <button class="unit pool" type="button" data-u="POOL" aria-pressed="false" data-i18n="how.pool">Pool</button>
+                  <button class="unit pool" type="button" data-u="GYM" aria-pressed="false" data-i18n="how.gym">Gym</button>
+                </div>
+              </div>
+              <div class="zone" data-z="shops">
+                <div class="zl"><span class="gate-mark" data-i18n="how.shops">Commercial strip</span></div>
+                <div class="units">
+                  <button class="unit shop" type="button" data-u="SHOP-3" aria-pressed="false" data-i18n="how.shop">Pharmacy</button>
+                </div>
+              </div>
+            </div>
+            <div class="zone" data-z="vzb">
+              <div class="zl"><span class="gate-mark" data-i18n="how.vzb">Villa Zone B · barrier</span></div>
+              <div class="units" style="margin-bottom:12px">
+                <button class="unit" type="button" data-u="V-03" aria-pressed="false">V-03</button>
+                <button class="unit" type="button" data-u="V-05" aria-pressed="false">V-05</button>
+                <button class="unit" type="button" data-u="V-08" aria-pressed="false">V-08</button>
+              </div>
+              <div class="zone" data-z="vip">
+                <div class="zl"><span class="gate-mark" data-i18n="how.vip">VIP Zone · gate</span></div>
+                <div class="units">
+                  <button class="unit" type="button" data-u="V-14" aria-pressed="true">V-14</button>
+                  <button class="unit" type="button" data-u="V-16" aria-pressed="false">V-16</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <aside class="grant" aria-live="polite">
+        <div class="grant-card">
+          <svg class="guilloche" viewBox="-260 -260 520 520" aria-hidden="true" data-rosette="14"></svg>
+          <div class="field-label" data-i18n="how.grant">Access granted to</div>
+          <h3 id="grantTitle">Villa V-14</h3>
+          <ul class="opens" id="opens"></ul>
+          <p class="grant-note" id="grantNote"></p>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════════ PASSES ═════════════ -->
+<section class="passes" id="passes" data-dark aria-labelledby="passes-title">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2 id="passes-title" class="rise" data-i18n="passes.title">One pass for every kind of visit.</h2>
+      <p class="lede rise" data-i18n-html="passes.lede">Residents create them in the app and send them on WhatsApp. Every pass comes from the resident's own right, so <strong>it can never outlast it</strong>. The gate checks the window, not the guard's memory.</p>
+    </div>
+    <div class="strip" id="strip" aria-label="Pass types">
+      <!-- rendered by script from PASSES -->
+    </div>
+    <div class="strip-hint"><span data-i18n="passes.hint">The last three are what the gate sees when a pass isn't good.</span></div>
+  </div>
+</section>
+
+<!-- ═════════════ OWNERSHIP ═════════════ -->
+<section id="ownership" aria-labelledby="own-title">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2 id="own-title" class="rise" data-i18n="own.title">Sell a unit. The keys change hands.</h2>
+      <p class="lede rise" data-i18n="own.lede">Access in kmpndi comes from ownership and occupancy, recorded like a title deed. When a unit is sold or leased, the right people gain access and the wrong people lose it, automatically. Nobody has to remember to update the gate.</p>
+    </div>
+    <div class="chain rise">
+      <div class="link">
+        <div class="when mono" data-i18n="own.w1">Day 0 · handover</div>
+        <h3 data-i18n="own.h1">The developer owns every unit</h3>
+        <p data-i18n="own.p1">Every unit starts with the developer on the record.</p>
+        <div class="holder"><span class="av">PD</span><span data-i18n="own.d1">Developer</span></div>
+      </div>
+      <div class="link">
+        <div class="when mono" data-i18n="own.w2">Sale recorded</div>
+        <h3 data-i18n="own.h2">Ownership moves to the buyer</h3>
+        <p data-i18n="own.p2">kmpndi makes the buyer the resident and gives them access to the unit, its zone and the main gate.</p>
+        <div class="holder"><span class="av">NH</span><span data-i18n="own.d2">Nour Hassan · owner</span></div>
+      </div>
+      <div class="link">
+        <div class="when mono" data-i18n="own.w3">Family added</div>
+        <h3 data-i18n="own.h3">Her family gets in too</h3>
+        <p data-i18n="own.p3">Each family member gets their own access, and it ends the day they leave the family.</p>
+        <div class="fan"><span data-i18n="own.f1">Spouse</span><span data-i18n="own.f2">Son</span><span data-i18n="own.f3">Daughter</span><span data-i18n="own.f4">Mother</span></div>
+      </div>
+      <div class="link">
+        <div class="when mono" data-i18n="own.w4">Leased</div>
+        <h3 data-i18n="own.h4">The tenant takes over the gate</h3>
+        <p data-i18n="own.p4">While a tenant lives there, only the tenant can invite guests. The owner's access pauses and comes back when the lease ends.</p>
+        <div class="holder"><span class="av">KS</span><span data-i18n="own.d4">Karim Saleh · tenant</span></div>
+      </div>
+    </div>
+    <div class="audit rise"><span data-i18n-html="own.a1"><b>Every change is recorded:</b> who granted what, to whom, and when.</span><span data-i18n="own.a2">Companies work the same way: their admins manage their staff's access.</span></div>
+    <p class="example-note" data-i18n="own.note">Names are illustrative.</p>
+  </div>
+</section>
+
+<!-- ═════════════ EVERYTHING ELSE ═════════════ -->
+<section id="everything" style="padding-top:0" aria-labelledby="all-title">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2 id="all-title" class="rise" data-i18n="all.title">The rest of compound life rides the same rights.</h2>
+      <p class="lede rise" data-i18n="all.lede">Once kmpndi knows who lives where, everything else in the compound runs on that record: the pool, the pharmacy, the broken AC, the second car.</p>
+    </div>
+    <div class="modules" id="modules"><!-- rendered by script --></div>
+  </div>
+</section>
+
+<!-- ═════════════ APPS ═════════════ -->
+<section class="apps" id="apps" data-dark aria-labelledby="apps-title">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2 id="apps-title" class="rise" data-i18n="apps.title">Four apps. One set of rights.</h2>
+      <p class="lede rise" data-i18n="apps.lede">Each person gets the app for their job, and every app reads the same ownership and access record.</p>
+    </div>
+    <div class="class-list" id="apps-list"><!-- rendered by script --></div>
+  </div>
+</section>
+
+<!-- ═════════════ EGYPT ═════════════ -->
+<section id="egypt" aria-labelledby="egypt-title">
+  <div class="wrap egypt-grid">
+    <h2 id="egypt-title" class="bilingual rise"><span data-i18n="egypt.title">Made for how Egyptian compounds work.</span><span class="ar" id="egyptAlt">صُنع لكمبوندات مصر</span></h2>
+    <ul class="truths rise" id="truths"><!-- rendered by script --></ul>
+  </div>
+</section>
+
+<!-- ═════════════ CONTACT ═════════════ -->
+<section class="contact" id="contact" data-dark aria-labelledby="contact-title">
+  <svg class="guilloche" viewBox="-260 -260 520 520" aria-hidden="true" data-rosette="30"></svg>
+  <div class="wrap contact-grid">
+    <div>
+      <h2 id="contact-title" class="rise" data-i18n="contact.title">Put your compound on kmpndi.</h2>
+      <p class="lede rise" style="margin-top:24px" data-i18n="contact.lede">Tell us about your compound. The kmpndi team will walk you through setup. If you'd rather not map it yourself, we can import it from your spreadsheets.</p>
+      <div class="direct rise">
+        <div><span class="field-label" style="opacity:.85" data-i18n="contact.or">Or write directly</span><br><a href="mailto:sales@kmpndi.com" id="directMail">sales@kmpndi.com</a></div>
+      </div>
+    </div>
+    <div class="form rise" id="formCard">
+      <form id="leadForm" novalidate>
+        <div class="form-head"><span class="t" data-i18n="form.t">Onboarding request</span><span class="field-label mono">KMP · 2026</span></div>
+        <div class="fgrid">
+          <div class="f"><label class="field-label" for="fName" data-i18n="form.name">Your name</label><input id="fName" name="name" autocomplete="name" required><div class="err" data-i18n="form.eName">Add your name so we know who to ask for.</div></div>
+          <div class="f"><label class="field-label" for="fCompany" data-i18n="form.company">Developer / company</label><input id="fCompany" name="company" autocomplete="organization" required><div class="err" data-i18n="form.eCompany">Add the developer or company name.</div></div>
+          <div class="f"><label class="field-label" for="fCompound" data-i18n="form.compound">Compound name</label><input id="fCompound" name="compound"></div>
+          <div class="f"><label class="field-label" for="fUnits" data-i18n="form.units">Number of units</label>
+            <select id="fUnits" name="units">
+              <option value="" data-i18n="form.u0">Choose a range</option>
+              <option value="Under 500" data-i18n="form.u1">Under 500</option>
+              <option value="500 – 2,000" data-i18n="form.u2">500 – 2,000</option>
+              <option value="2,000 – 5,000" data-i18n="form.u3">2,000 – 5,000</option>
+              <option value="5,000+" data-i18n="form.u4">5,000 or more</option>
+            </select></div>
+          <div class="f"><label class="field-label" for="fPhone" data-i18n="form.phone">Phone / WhatsApp</label><input id="fPhone" name="phone" type="tel" autocomplete="tel" inputmode="tel" placeholder="+20 10 0000 0000" dir="ltr"></div>
+          <div class="f"><label class="field-label" for="fEmail" data-i18n="form.email">Email</label><input id="fEmail" name="email" type="email" autocomplete="email" required dir="ltr"><div class="err" data-i18n="form.eEmail">Enter an email we can reply to, like name@company.com.</div></div>
+          <div class="f full"><label class="field-label" for="fMsg" data-i18n="form.msg">What should we know?</label><textarea id="fMsg" name="message" data-i18n-ph="form.msgph" placeholder="Gates, current system, when you're handing over units…"></textarea></div>
+        </div>
+        <div class="form-foot">
+          <small data-i18n="form.note">Sending opens your email app with the message ready to send to the kmpndi team.</small>
+          <button class="btn btn-go" type="submit"><span data-i18n="form.send">Send to the kmpndi team</span><svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+        </div>
+      </form>
+      <div class="sent" role="status">
+        <span class="stamp" data-i18n="sent.stamp">Issued</span>
+        <h3 data-i18n="sent.t">Your email is ready to send.</h3>
+        <p data-i18n-html="sent.p">We've opened your email app with the message filled in. Press send there. If nothing opened, write to <a href="mailto:sales@kmpndi.com">sales@kmpndi.com</a>.</p>
+        <button class="btn btn-ghost" type="button" id="again" style="color:var(--ink)" data-i18n="sent.again">Edit the request</button>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a class="brand" href="#top" dir="ltr" aria-label="kmpndi home">kmpnd<span class="i">ı</span></a>
+    <nav aria-label="Footer">
+      <a href="#how" data-i18n="nav.how">How it works</a>
+      <a href="#everything" data-i18n="nav.all">The whole compound</a>
+      <a href="#contact" data-i18n="nav.cta">Talk to us</a>
+      <a href="mailto:sales@kmpndi.com">sales@kmpndi.com</a>
+    </nav>
+    <span>© 2026 kmpndi</span>
+  </div>
+</footer>
+
+<script>
+(function(){
+document.documentElement.classList.add('js');
+var CONTACT_EMAIL='sales@kmpndi.com'; /* replace with the kmpndi manager's address */
+
+/* ───── i18n ───── */
+var AR={
+ skip:'تخطَّ إلى المحتوى',
+ 'nav.how':'كيف يعمل','nav.passes':'التصاريح','nav.all':'الكمبوند كله','nav.apps':'التطبيقات','nav.cta':'تواصل معنا',
+ 'rail.gate':'البوابة','rail.today':'اليوم','rail.map':'ارسمه مرة','rail.passes':'التصاريح','rail.own':'الملكية','rail.all':'كل الباقي','rail.apps':'أربعة تطبيقات','rail.egypt':'صُنع لمصر','rail.contact':'تواصل معنا',
+ 'hero.title':'كمبوند يُدير نفسه بنفسه.',
+ 'hero.lede':'kmpndi يحوّل خريطة الكمبوند (المناطق والمباني والوحدات والملّاك) إلى صلاحيات دخول حيّة على البوابة. <strong>السكان يصدرون تصاريح QR بأنفسهم، والأمن يمسحها، وتنتهي قوائم الورق.</strong>',
+ 'hero.f1':'حامل التصريح','hero.v1':'المطوّرون العقاريون','hero.f2':'يشمل','hero.v2':'البوابات · المناطق · المباني · الوحدات','hero.f3':'يعمل مع','hero.v3':'QR · NFC · موبايل فرد الأمن',
+ 'hero.stub':'احجز تجهيز الكمبوند','hero.sf1':'يسمح بدخول','hero.sv1':'كمبوند واحد','hero.sf2':'البوابات','hero.sv2':'كلها','hero.sf3':'الصلاحية','hero.sv3':'٢٤ / ٧','hero.cta':'كلّم فريق kmpndi',
+ 'film.pause':'إيقاف الفيلم','film.play':'تشغيل الفيلم','film.full':'شاهد الفيلم',
+ 'today.title':'بوابتك لسه شغّالة بالورق.',
+ 'today.lede':'قوائم ضيوف على واتساب، وكروت عمّال محدش بيراجعها، وسكان سابقين سابوا الشقة من شهور ولسه بيدخلوا بإشارة. فرد الأمن بيعمل اللي يقدر عليه، بس كل اللي في إيده تخمين.',
+ 'today.s1':'غير واضح','today.w1':'ضيف · ٢١:١٠','today.h1':'صورة بطاقة مش واضحة','today.p1':'اتبعتت على واتساب تلات مرات، والأمن مش عارف ده ضيف مين.',
+ 'today.s2':'منتهي','today.w2':'عامل · ٠٧:٤٥','today.h2':'كارت متغلّف من السنة اللي فاتت','today.p2':'العقد خلص، بس الكارت لسه بيعدّي على البوابة.',
+ 'today.s3':'ملغي؟','today.w3':'مستأجر سابق · ١٨:٣٠','today.h3':'وش فرد الأمن فاكره','today.p3':'الإيجار خلص في الربيع، ومحدش بلّغ البوابة.',
+ 'today.s4':'مجهول','today.w4':'توصيل · ١٣:٠٥','today.h4':'تلات مكالمات لتلات فيلات','today.p4':'محدش بيرد، والطلب مستني عند الحاجز، والساكن متضايق.',
+ 'today.close':'kmpndi يستبدل التخمين <em>بقاعدة واحدة تقدر البوابة تتحقق منها</em>: مين مالك الوحدة أو ساكن فيها، ومين هو سمح له بالدخول.',
+ 'how.title':'ارسمه مرة. والصلاحيات تتوارث.',
+ 'how.lede':'ترسم الكمبوند في تطبيق الإدارة: البوابات، والمناطق جوّه المناطق، والمباني، والوحدات. <strong>امنح صلاحية لوحدة، وkmpndi يفتح لصاحبها المبنى وكل منطقة حواليها والبوابة الرئيسية.</strong> جرّب: اختار وحدة.',
+ 'how.hint':'كمبوند تجريبي · اختار وحدة','how.gc':'الكمبوند · البوابة الرئيسية A','how.twr':'برج A2 · باب المدخل','how.club':'النادي · المرافق','how.shops':'الشريط التجاري','how.vzb':'منطقة الفيلات B · حاجز','how.vip':'منطقة VIP · بوابة','how.pool':'حمام السباحة','how.gym':'الجيم','how.shop':'صيدلية','how.grant':'صلاحية دخول ممنوحة لـ',
+ 'passes.title':'تصريح لكل نوع زيارة.',
+ 'passes.lede':'السكان بيعملوها من التطبيق ويبعتوها على واتساب. كل تصريح طالع من صلاحية الساكن نفسه، <strong>فعمره ما يعيش بعدها</strong>. البوابة بتراجع المدة، مش ذاكرة فرد الأمن.',
+ 'passes.hint':'آخر تلاتة هم اللي البوابة بتشوفها لما التصريح مش صالح.',
+ 'own.title':'تبيع الوحدة، والمفاتيح تتنقل.',
+ 'own.lede':'الدخول في kmpndi طالع من الملكية والإشغال، ومتسجّل زي عقد الملكية. لما وحدة تتباع أو تتأجر، الناس الصح بياخدوا الصلاحية والغلط بيخسروها، أوتوماتيك. محدش محتاج يفتكر يحدّث البوابة.',
+ 'own.w1':'يوم ٠ · التسليم','own.h1':'المطوّر يملك كل الوحدات','own.p1':'كل وحدة بتبدأ والمطوّر هو المالك المسجّل.','own.d1':'المطوّر',
+ 'own.w2':'تسجيل البيع','own.h2':'الملكية تنتقل للمشتري','own.p2':'kmpndi بيسجّل المشتري كساكن ويديله دخول الوحدة ومنطقتها والبوابة الرئيسية.','own.d2':'نور حسن · مالكة',
+ 'own.w3':'إضافة العيلة','own.h3':'وعيلتها تدخل كمان','own.p3':'كل فرد في العيلة بياخد صلاحيته، وبتنتهي يوم ما يطلع من العيلة.','own.f1':'الزوج','own.f2':'الابن','own.f3':'البنت','own.f4':'الأم',
+ 'own.w4':'تأجير','own.h4':'المستأجر يستلم البوابة','own.p4':'طول ما المستأجر ساكن، هو بس اللي يقدر يدعي ضيوف. صلاحية المالك بتتوقف وترجع لما الإيجار يخلص.','own.d4':'كريم صالح · مستأجر',
+ 'own.a1':'<b>كل تغيير متسجّل:</b> مين منح إيه، لمين، وإمتى.','own.a2':'الشركات بنفس الطريقة: مسؤولينها بيديروا صلاحيات موظفينهم.','own.note':'الأسماء للتوضيح فقط.',
+ 'all.title':'باقي حياة الكمبوند ماشية على نفس الصلاحيات.',
+ 'all.lede':'أول ما kmpndi يعرف مين ساكن فين، كل حاجة تانية في الكمبوند بتشتغل على السجل ده: حمام السباحة، والصيدلية، والتكييف العطلان، والعربية التانية.',
+ 'apps.title':'أربعة تطبيقات. سجل صلاحيات واحد.',
+ 'apps.lede':'كل شخص بياخد التطبيق المناسب لشغله، وكل التطبيقات بتقرا نفس سجل الملكية والصلاحيات.',
+ 'egypt.title':'معمول على طريقة كمبوندات مصر.',
+ 'contact.title':'حط الكمبوند بتاعك على kmpndi.',
+ 'contact.lede':'احكيلنا عن الكمبوند. فريق kmpndi هيمشي معاك في التجهيز، ولو مش عايز ترسمه بنفسك، نقدر نستورده من ملفات الإكسل بتاعتك.',
+ 'contact.or':'أو ابعت مباشرة',
+ 'form.t':'طلب تجهيز','form.name':'اسمك','form.company':'المطوّر / الشركة','form.compound':'اسم الكمبوند','form.units':'عدد الوحدات','form.u0':'اختار النطاق','form.u1':'أقل من ٥٠٠','form.u2':'٥٠٠ – ٢٬٠٠٠','form.u3':'٢٬٠٠٠ – ٥٬٠٠٠','form.u4':'٥٬٠٠٠ أو أكتر','form.phone':'موبايل / واتساب','form.email':'الإيميل','form.msg':'عايزنا نعرف إيه؟','form.msgph':'البوابات، النظام الحالي، إمتى هتسلّم الوحدات…',
+ 'form.eName':'اكتب اسمك عشان نعرف نسأل على مين.','form.eCompany':'اكتب اسم المطوّر أو الشركة.','form.eEmail':'اكتب إيميل نقدر نرد عليه، زي name@company.com.',
+ 'form.note':'الإرسال بيفتح تطبيق الإيميل عندك والرسالة جاهزة تتبعت لفريق kmpndi.','form.send':'ابعت لفريق kmpndi',
+ 'sent.stamp':'تم الإصدار','sent.t':'الإيميل جاهز للإرسال.','sent.p':'فتحنا تطبيق الإيميل والرسالة مكتوبة. دوس إرسال هناك. لو مفتحش حاجة، ابعت على <a href="mailto:sales@kmpndi.com">sales@kmpndi.com</a>.','sent.again':'عدّل الطلب'
+};
+var EN={};
+document.querySelectorAll('[data-i18n]').forEach(function(el){EN[el.dataset.i18n]=el.textContent});
+document.querySelectorAll('[data-i18n-html]').forEach(function(el){EN[el.dataset.i18nHtml]=el.innerHTML});
+document.querySelectorAll('[data-i18n-ph]').forEach(function(el){EN[el.dataset.i18nPh]=el.placeholder});
+EN['film.play']='Play film';
+
+/* Content rendered from data, bilingual */
+var L=function(en,ar){return {en:en,ar:ar}};
+var UNITS={
+ 'V-14':{t:L('Villa V-14','فيلا V-14'),chain:['vip','vzb','gc'],doors:[L('VIP Zone gate','بوابة منطقة VIP'),L('Villa Zone B barrier','حاجز منطقة الفيلات B'),L('Main gate A','البوابة الرئيسية A')],note:L('Two nested zones, one grant. The owner never asks security for anything.','منطقتين جوّه بعض، بصلاحية واحدة. المالك مش محتاج يطلب حاجة من الأمن.')},
+ 'V-16':{t:L('Villa V-16','فيلا V-16'),chain:['vip','vzb','gc'],doors:[L('VIP Zone gate','بوابة منطقة VIP'),L('Villa Zone B barrier','حاجز منطقة الفيلات B'),L('Main gate A','البوابة الرئيسية A')],note:L('Same zone as V-14, so exactly the same doors open.','نفس منطقة V-14، فنفس الأبواب بالظبط بتتفتح.')},
+ 'V-03':{t:L('Villa V-03','فيلا V-03'),chain:['vzb','gc'],doors:[L('Villa Zone B barrier','حاجز منطقة الفيلات B'),L('Main gate A','البوابة الرئيسية A')],note:L('Outside the VIP zone, so its gate stays closed to this household.','برّه منطقة VIP، فبوابتها تفضل مقفولة على الأسرة دي.')},
+ 'V-05':{t:L('Villa V-05','فيلا V-05'),chain:['vzb','gc'],doors:[L('Villa Zone B barrier','حاجز منطقة الفيلات B'),L('Main gate A','البوابة الرئيسية A')],note:L('Outside the VIP zone, so its gate stays closed to this household.','برّه منطقة VIP، فبوابتها تفضل مقفولة على الأسرة دي.')},
+ 'V-08':{t:L('Villa V-08','فيلا V-08'),chain:['vzb','gc'],doors:[L('Villa Zone B barrier','حاجز منطقة الفيلات B'),L('Main gate A','البوابة الرئيسية A')],note:L('Outside the VIP zone, so its gate stays closed to this household.','برّه منطقة VIP، فبوابتها تفضل مقفولة على الأسرة دي.')},
+ 'A2-3':{t:L('Apartment A2-3','شقة A2-3'),chain:['twr','gc'],doors:[L('Tower A2 lobby door','باب مدخل برج A2'),L('Main gate A','البوابة الرئيسية A')],note:L('The apartment opens its own building, never the villa zones.','الشقة بتفتح المبنى بتاعها بس، عمرها ما تفتح مناطق الفيلات.')},
+ 'A2-7':{t:L('Apartment A2-7','شقة A2-7'),chain:['twr','gc'],doors:[L('Tower A2 lobby door','باب مدخل برج A2'),L('Main gate A','البوابة الرئيسية A')],note:L('The apartment opens its own building, never the villa zones.','الشقة بتفتح المبنى بتاعها بس، عمرها ما تفتح مناطق الفيلات.')},
+ 'A2-12':{t:L('Apartment A2-12','شقة A2-12'),chain:['twr','gc'],doors:[L('Tower A2 lobby door','باب مدخل برج A2'),L('Main gate A','البوابة الرئيسية A')],note:L('The apartment opens its own building, never the villa zones.','الشقة بتفتح المبنى بتاعها بس، عمرها ما تفتح مناطق الفيلات.')},
+ 'A2-18':{t:L('Apartment A2-18','شقة A2-18'),chain:['twr','gc'],doors:[L('Tower A2 lobby door','باب مدخل برج A2'),L('Main gate A','البوابة الرئيسية A')],note:L('The apartment opens its own building, never the villa zones.','الشقة بتفتح المبنى بتاعها بس، عمرها ما تفتح مناطق الفيلات.')},
+ 'POOL':{t:L('Pool slot · 17:00','حجز حمام السباحة · ١٧:٠٠'),chain:['club','gc'],doors:[L('Clubhouse door, 17:00–18:00 only','باب النادي، من ١٧:٠٠ لـ ١٨:٠٠ بس'),L('Main gate A','البوابة الرئيسية A')],note:L('A booking is a time-limited right. The slot can\'t be double-booked.','الحجز صلاحية لمدة محددة، والميعاد مايتحجزش مرتين.')},
+ 'GYM':{t:L('Gym membership','اشتراك الجيم'),chain:['club','gc'],doors:[L('Clubhouse gym, 06:00–23:00','جيم النادي، من ٠٦:٠٠ لـ ٢٣:٠٠'),L('Main gate A','البوابة الرئيسية A')],note:L('Facilities follow the same rules as homes: who, where, and when.','المرافق ماشية بنفس قواعد البيوت: مين، وفين، وإمتى.')},
+ 'SHOP-3':{t:L('Pharmacy · shop 3','صيدلية · محل ٣'),chain:['shops','gc'],doors:[L('Commercial strip, staff entrance','الشريط التجاري، مدخل العاملين'),L('Main gate A (delivery riders)','البوابة الرئيسية A (مندوبي التوصيل)')],note:L('Commercial units become marketplace shops automatically. Riders get delivery passes.','الوحدات التجارية بتتحوّل لمحلات في الماركت أوتوماتيك، والمندوبين بياخدوا تصاريح توصيل.')}
+};
+var PASSES=[
+ {cls:L('Guest','ضيف'),name:L('Omar Adel','عمر عادل'),rows:[[L('Unit','الوحدة'),'V-14'],[L('Gate','البوابة'),L('Main · A','الرئيسية · A')]],win:L('Today · 18:00 → 23:00','النهارده · ١٨:٠٠ ← ٢٣:٠٠'),bar:[62,22],seed:4},
+ {cls:L('Worker','عامل'),name:L('Mahmoud · gardener','محمود · جنايني'),rows:[[L('Unit','الوحدة'),'V-14'],[L('Repeats','يتكرر'),L('Sun–Thu','الأحد–الخميس')]],win:L('Every week · 08:00 → 16:00','كل أسبوع · ٠٨:٠٠ ← ١٦:٠٠'),bar:[33,34],seed:9},
+ {cls:L('Delivery','توصيل'),name:L('Pharmacy rider','مندوب الصيدلية'),rows:[[L('To','إلى'),'A2-7'],[L('Pay','الدفع'),L('Cash','كاش')]],win:L('Next 30 minutes','خلال ٣٠ دقيقة'),bar:[70,6],seed:13},
+ {cls:L('Vehicle','عربية'),name:L('Guest car','عربية ضيف'),plate:true,rows:[[L('Make','الماركة'),L('Kia · white','كيا · أبيض')],[L('Host','المضيف'),'V-14']],win:L('Today · until 23:00','النهارده · لحد ٢٣:٠٠'),bar:[62,22],seed:21},
+ {cls:L('Family','عيلة'),name:L('Salma Hassan','سلمى حسن'),rows:[[L('Unit','الوحدة'),'V-14'],[L('Via','عن طريق'),L('Family','العيلة')]],win:L('Permanent, while the family lives here','دائم، طول ما العيلة ساكنة'),bar:[0,100],seed:33},
+ {dead:'expired',stamp:L('Expired','منتهي'),cls:L('Worker','عامل'),name:L('Painter · last month','نقّاش · الشهر اللي فات'),rows:[[L('Unit','الوحدة'),'A2-12'],[L('Ended','انتهى'),L('30 Aug','٣٠ أغسطس')]],win:L('Window closed. The gate says no.','المدة خلصت، والبوابة بترفض.'),bar:[0,0],seed:41},
+ {dead:'revoked',stamp:L('Revoked','ملغي'),cls:L('Tenant','مستأجر'),name:L('Former tenant','مستأجر سابق'),rows:[[L('Unit','الوحدة'),'V-05'],[L('Reason','السبب'),L('Lease ended','الإيجار خلص')]],win:L('Revoked with the lease, with all their guest passes.','اتلغى مع الإيجار، ومعاه كل تصاريح ضيوفه.'),bar:[0,0],seed:52},
+ {dead:'pending',stamp:L('Not yet','لسه'),cls:L('Guest','ضيف'),name:L('Weekend visitor','زائر الويك إند'),rows:[[L('Unit','الوحدة'),'V-08'],[L('Starts','يبدأ'),L('Fri 10:00','الجمعة ١٠:٠٠')]],win:L('Valid from Friday. Until then, the gate waits.','صالح من الجمعة، ولحد وقتها البوابة مستنية.'),bar:[88,10],seed:63}
+];
+var IC={
+ fac:'<path d="M3 17c2 0 2-1.5 4.5-1.5S9.5 17 12 17s2-1.5 4.5-1.5S19 17 21 17"/><path d="M3 21c2 0 2-1.5 4.5-1.5S9.5 21 12 21s2-1.5 4.5-1.5S19 21 21 21"/><path d="M8 13V5a2 2 0 0 1 4 0M16 13V5a2 2 0 0 0-4 0M8 8h8"/>',
+ mkt:'<path d="M4 9l1.5-5h13L20 9"/><path d="M4 9a2.7 2.7 0 0 0 5.3 0 2.7 2.7 0 0 0 5.4 0 2.7 2.7 0 0 0 5.3 0"/><path d="M5 11v9h14v-9M10 20v-5h4v5"/>',
+ mnt:'<path d="M14.5 6.5a4 4 0 0 0 5 5L12 19a2.1 2.1 0 0 1-3-3z"/><path d="M14.5 6.5L17 4l3 3-2.5 2.5"/><path d="M4 20l3-3"/>',
+ car:'<path d="M3 16v-3l2-5h14l2 5v3"/><path d="M3 16h18v3H3z"/><circle cx="7" cy="16" r=".5"/><circle cx="17" cy="16" r=".5"/><path d="M6 8l1-3h10l1 3"/>',
+ brd:'<path d="M4 10v4h3l6 4V6L7 10z"/><path d="M17 9a4 4 0 0 1 0 6M19.5 6.5a8 8 0 0 1 0 11"/>',
+ stf:'<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 4l2 1v3.5c0 1.8-1 3-2 3.5-1-.5-2-1.7-2-3.5V5z"/>',
+ aud:'<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 12h7M9 16h7M9 8h2"/>',
+ hw:'<path d="M3 7V4h3M21 7V4h-3M3 17v3h3M21 17v3h-3"/><path d="M7 12h10M7 9h2M7 15h4M13 15h4M15 9h2"/>',
+ fam:'<circle cx="8" cy="7" r="2.6"/><circle cx="16" cy="7" r="2.6"/><circle cx="12" cy="13" r="2"/><path d="M3 20c0-2.8 2.2-5 5-5M21 20c0-2.8-2.2-5-5-5M8.5 21c0-2 1.6-3.5 3.5-3.5s3.5 1.5 3.5 3.5"/>',
+ sos:'<path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17v.5"/>',
+ idc:'<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2.2"/><path d="M5.5 16c.5-1.6 1.9-2.5 3.5-2.5s3 .9 3.5 2.5M14 10h4M14 13h3"/>',
+ imp:'<path d="M4 4h16v16H4z"/><path d="M4 9h16M4 14h16M10 4v16"/><path d="M15 17l2-2-2-2"/>'
+};
+var MODS=[
+ {k:'fac',cls:'fac',code:'FAC',t:L('Facility booking','حجز المرافق'),p:L('Pools, gyms and courts in time slots, with no double bookings.','حمامات السباحة والجيم والملاعب بمواعيد، ومن غير حجز مكرر.')},
+ {k:'mkt',cls:'mkt',code:'MKT',t:L('Marketplace','الماركت'),p:L('Shops in commercial units list themselves. Residents order by text or voice and pay cash on delivery.','محلات الوحدات التجارية بتظهر لوحدها. السكان بيطلبوا بالكتابة أو بالصوت، والدفع كاش عند الاستلام.')},
+ {k:'mnt',code:'MNT',t:L('Maintenance','الصيانة'),p:L('Residents send a photo and a description. Your staff work it from submitted to done.','الساكن يبعت صورة ووصف، وفريقك يشتغل عليه من الاستلام للتسليم.')},
+ {k:'car',code:'CAR',t:L('Vehicles & parking','العربيات والجراج'),p:L('A car allowance per unit, QR credentials for residents\' cars, and temporary passes for visitors\' cars.','عدد عربيات لكل وحدة، وQR لعربيات السكان، وتصاريح مؤقتة لعربيات الزوار.')},
+ {k:'brd',code:'BRD',t:L('Announcements','الإعلانات'),p:L('Schedule messages to the whole compound or to selected residents.','جدول رسائل للكمبوند كله أو لسكان بعينهم.')},
+ {k:'stf',code:'STF',t:L('Staff roles','أدوار الموظفين'),p:L('Security, maintenance, sales and office staff each see only their own work.','الأمن والصيانة والمبيعات والإدارة، كل واحد يشوف شغله بس.')},
+ {k:'aud',cls:'hot',code:'AUD',t:L('Audit trail','سجل التدقيق'),p:L('Every grant can be traced to the person who made it. Every entry and override is logged.','كل صلاحية معروف مين منحها، وكل دخول واستثناء متسجّل.')},
+ {k:'hw',code:'HW',t:L('Your hardware','أجهزتك الحالية'),p:L('QR scanners, NFC readers, or just the guard\'s phone. kmpndi fits the gate you already have.','ماسحات QR أو قارئات NFC أو موبايل فرد الأمن. kmpndi بيركب على البوابة اللي عندك.')},
+ {k:'fam',code:'FAM',t:L('Families & companies','العائلات والشركات'),p:L('Households and companies manage their own members, and their access follows them.','الأسر والشركات بيديروا أفرادهم، والصلاحيات ماشية معاهم.')},
+ {k:'sos',code:'SOS',t:L('Emergency override','دخول الطوارئ'),p:L('Urgent access with a stated reason, reviewed afterwards by management.','دخول عاجل بسبب مكتوب، والإدارة بتراجعه بعدها.')},
+ {k:'idc',code:'ID',t:L('Verified identity','هوية موثّقة'),p:L('National ID or passport checks, with login by phone or WhatsApp code.','تحقق بالرقم القومي أو الباسبور، ودخول بكود على الموبايل أو واتساب.')},
+ {k:'imp',cls:'hot',code:'IMP',t:L('We set it up for you','إحنا نجهّزهولك'),p:L('Our team can import your units, owners and staff from spreadsheets.','فريقنا يقدر يستورد الوحدات والملّاك والموظفين من ملفات الإكسل.')}
+];
+var APPS=[
+ {code:'R',t:L('Resident app','تطبيق السكان'),who:L('Owners, tenants, families','الملّاك والمستأجرين والعائلات'),does:L('Guest and worker passes, cars, bookings, shop orders, maintenance requests, announcements.','تصاريح الضيوف والعمّال، والعربيات، والحجوزات، وطلبات المحلات، والصيانة، والإعلانات.'),dev:L('iOS · Android','iOS · Android')},
+ {code:'S',t:L('Staff app','تطبيق الموظفين'),who:L('Guards, maintenance, management','الأمن والصيانة والإدارة'),does:L('Scan and verify passes at the gate, handle assigned tasks, report incidents.','مسح التصاريح والتحقق منها على البوابة، وتنفيذ المهام، والإبلاغ عن الحوادث.'),dev:L('iOS · Android','iOS · Android')},
+ {code:'D',t:L('Developer admin','إدارة المطوّر'),who:L('Your compound management','إدارة الكمبوند عندك'),does:L('Configure gates, zones, buildings, units and parking. Transfer ownership, manage staff, see dashboards.','ضبط البوابات والمناطق والمباني والوحدات والجراجات، ونقل الملكية، وإدارة الموظفين، ولوحات المتابعة.'),dev:L('Web','ويب')},
+ {code:'K',t:L('kmpndi admin','إدارة kmpndi'),who:L('The kmpndi team','فريق kmpndi'),does:L('Set up developers and compounds, run bulk imports, support you after launch.','تجهيز المطوّرين والكمبوندات، والاستيراد بالجملة، والدعم بعد التشغيل.'),dev:L('Web','ويب')}
+];
+var TRUTHS=[
+ {i:'fam',t:L('Families, not just residents','عائلات، مش سكان وبس'),p:L('Several households under one family and one unit, each managing its own people.','أكتر من أسرة تحت عيلة ووحدة واحدة، وكل أسرة بتدير ناسها.')},
+ {i:'mkt',t:L('Cash on delivery','الدفع كاش عند الاستلام'),p:L('The local shop and the rider with change in his pocket, handled properly.','المحل اللي جنبك والمندوب اللي معاه الفكّة، في نظام محترم.')},
+ {i:'idc',t:L('National ID and WhatsApp','الرقم القومي وواتساب'),p:L('Identity by National ID or passport. Codes and passes arrive on WhatsApp.','الهوية بالرقم القومي أو الباسبور، والأكواد والتصاريح بتوصل على واتساب.')},
+ {i:'hw',t:L('Works when the scanner doesn\'t','شغّال حتى لو الماسح عطلان'),p:L('Guards can verify a pass by eye with the staff app when hardware is down.','الأمن يقدر يتحقق من التصريح بعينه من تطبيق الموظفين لو الأجهزة وقعت.')},
+ {i:'brd',t:L('Arabic and English, fully','عربي وإنجليزي بالكامل'),p:L('Every screen in both languages, right-to-left done properly.','كل شاشة باللغتين، والعربي من اليمين للشمال زي ما لازم.')}
+];
+
+var lang='en';
+function tx(v){return typeof v==='string'?v:v[lang]}
+var TICK='<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>';
+
+/* ───── Guilloche rosettes (security print) ───── */
+function rosette(R,A,n,ph){var d='';for(var i=0;i<=720;i++){var th=i/720*Math.PI*2,r=R+A*Math.sin(n*th+ph)+A*.32*Math.sin(n*3*th-ph*2);d+=(i?'L':'M')+(r*Math.cos(th)).toFixed(1)+','+(r*Math.sin(th)).toFixed(1)}return d+'Z'}
+document.querySelectorAll('svg[data-rosette]').forEach(function(svg){var n=+svg.dataset.rosette,h='';for(var k=0;k<n;k++){h+='<path d="'+rosette(250*(.55+.45*k/n),28,12,k/n*Math.PI*2)+'" fill="none" stroke="currentColor" stroke-width="1"/>'}svg.innerHTML=h});
+
+/* ───── QR (illustrative) ───── */
+function rnd(i){var x=Math.sin(i*127.1+311.7)*43758.5453;return x-Math.floor(x)}
+function qr(seed,color){var N=25,s='';function fin(r,c){function b(r0,c0){var rr=r-r0,cc=c-c0;if(rr<0||rr>6||cc<0||cc>6)return null;var ring=Math.max(Math.abs(rr-3),Math.abs(cc-3));return ring===3||ring<=1}var v=b(0,0);if(v===null)v=b(0,N-7);if(v===null)v=b(N-7,0);return v}
+ for(var r=0;r<N;r++)for(var c=0;c<N;c++){var f=fin(r,c),q=(r<8&&c<8)||(r<8&&c>N-9)||(r>N-9&&c<8);var on=f!==null?f:(!q&&rnd(r*31+c*7+seed)>.52);if(on)s+='M'+c+' '+r+'h1v1h-1z'}
+ return '<svg class="qr" viewBox="0 0 25 25" shape-rendering="crispEdges" aria-hidden="true"><path d="'+s+'" fill="'+(color||'#121417')+'"/></svg>'}
+document.querySelectorAll('[data-qr]').forEach(function(el){el.innerHTML=qr(+el.dataset.qr,'#ffffff')});
+
+/* ───── Renderers ───── */
+function renderPasses(){var h='';PASSES.forEach(function(p){
+ h+='<article class="tk'+(p.dead?' dead-tk '+p.dead:'')+'">'+
+ '<div class="top"><span class="cls">'+tx(p.cls)+'</span><span class="field-label mono">KMP-'+(1000+p.seed*37)+'</span></div>'+
+ (p.dead?'<span class="stamp">'+tx(p.stamp)+'</span>':'')+
+ '<h3>'+tx(p.name)+'</h3>'+
+ (p.plate?'<div class="plate" aria-label="Plate ABC 123"><span>ABC 123</span><span lang="ar">أ ب ج ١٢٣</span></div>':'')+
+ '<div class="rows">'+p.rows.map(function(r){return '<div><div class="field-label">'+tx(r[0])+'</div><div class="v">'+tx(r[1])+'</div></div>'}).join('')+'</div>'+
+ '<div class="perf"></div>'+
+ '<div class="foot"><div class="window"><div class="field-label">'+(lang==='ar'?'المدة':'Valid')+'</div>'+tx(p.win)+'<div class="bar"><i style="left:'+p.bar[0]+'%;width:'+p.bar[1]+'%"></i></div></div>'+qr(p.seed)+'</div>'+
+ '</article>'});document.getElementById('strip').innerHTML=h}
+function renderModules(){document.getElementById('modules').innerHTML=MODS.map(function(m){return '<article class="mod '+(m.cls||'')+'"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true">'+IC[m.k]+'</svg><h3>'+tx(m.t)+'</h3><p>'+tx(m.p)+'</p></article>'}).join('')}
+function renderApps(){document.getElementById('apps-list').innerHTML=APPS.map(function(a){return '<article class="cls-row"><span class="code" aria-hidden="true">'+a.code+'</span><div><h3>'+tx(a.t)+'</h3><p class="who">'+tx(a.who)+'</p></div><p class="does">'+tx(a.does)+'</p><span class="dev">'+tx(a.dev)+'</span></article>'}).join('')}
+function renderTruths(){document.getElementById('truths').innerHTML=TRUTHS.map(function(t){return '<li><svg viewBox="0 0 24 24" aria-hidden="true">'+IC[t.i]+'</svg><div><h3>'+tx(t.t)+'</h3><p>'+tx(t.p)+'</p></div></li>'}).join('')}
+
+/* ───── Signature interaction: inheritance ───── */
+var current='V-14';
+function grant(u){current=u;var d=UNITS[u];
+ document.querySelectorAll('.unit').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.u===u?'true':'false')});
+ document.querySelectorAll('.zone').forEach(function(z){z.classList.toggle('lit',d.chain.indexOf(z.dataset.z)>-1)});
+ document.getElementById('grantTitle').textContent=tx(d.t);
+ var rows=[{t:tx(d.t),why:lang==='ar'?'الملكية':'Ownership'}].concat(d.doors.map(function(x,i){return {t:tx(x),why:lang==='ar'?'متوارث':'Inherited'}}));
+ document.getElementById('opens').innerHTML=rows.map(function(r){return '<li><span class="tick">'+TICK+'</span><span>'+r.t+'</span><span class="why">'+r.why+'</span></li>'}).join('');
+ document.getElementById('grantNote').textContent=tx(d.note)}
+document.querySelectorAll('.unit').forEach(function(b){b.addEventListener('click',function(){grant(b.dataset.u)})});
+
+/* ───── Language ───── */
+function setLang(l){lang=l;var ar=l==='ar';var html=document.documentElement;html.lang=l;html.dir=ar?'rtl':'ltr';
+ document.querySelectorAll('[data-i18n]').forEach(function(el){var k=el.dataset.i18n;el.textContent=ar?(AR[k]||EN[k]):EN[k]});
+ document.querySelectorAll('[data-i18n-html]').forEach(function(el){var k=el.dataset.i18nHtml;el.innerHTML=ar?(AR[k]||EN[k]):EN[k]});
+ document.querySelectorAll('[data-i18n-ph]').forEach(function(el){var k=el.dataset.i18nPh;el.placeholder=ar?(AR[k]||EN[k]):EN[k]});
+ var b=document.getElementById('lang');b.textContent=ar?'English':'عربي';b.setAttribute('aria-label',ar?'Switch to English':'التبديل إلى العربية');
+ document.title=ar?'kmpndi — كمبوند يُدير نفسه بنفسه':'kmpndi — The compound that runs itself';
+ var alt=document.getElementById('egyptAlt');alt.textContent=ar?'Made for Egypt.':'صُنع لكمبوندات مصر';alt.lang=ar?'en':'ar';alt.dir=ar?'ltr':'rtl';
+ renderPasses();renderModules();renderApps();renderTruths();grant(current);syncFilmLabel();
+ try{localStorage.setItem('kmpndi-lang',l)}catch(e){}}
+document.getElementById('lang').addEventListener('click',function(){setLang(lang==='ar'?'en':'ar')});
+
+/* ───── Film controls ───── */
+var film=document.getElementById('film'),tog=document.getElementById('filmToggle');
+var reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function syncFilmLabel(){var paused=film.paused;document.getElementById('icPause').toggleAttribute('hidden',paused);document.getElementById('icPlay').toggleAttribute('hidden',!paused);tog.setAttribute('aria-pressed',paused?'true':'false');var k=paused?'film.play':'film.pause';var s=tog.querySelector('span');s.dataset.i18n=k;s.textContent=lang==='ar'?AR[k]:EN[k]}
+if(reduce){film.removeAttribute('autoplay');film.pause()}
+var small=window.matchMedia('(max-width: 900px)').matches;if(small)film.poster='assets/hero-mobile-poster.jpg';
+var LOOP=small?'assets/hero-mobile.mp4':'assets/hero.mp4';
+function restoreLoop(){if(document.fullscreenElement||document.webkitFullscreenElement)return;if(film.getAttribute('src')!=='assets/kmpndi-film.mp4')return;film.src=LOOP;film.loop=true;film.muted=true;if(!reduce)film.play()}
+document.addEventListener('fullscreenchange',restoreLoop);document.addEventListener('webkitfullscreenchange',restoreLoop);film.addEventListener('webkitendfullscreen',restoreLoop);
+film.addEventListener('play',syncFilmLabel);film.addEventListener('pause',syncFilmLabel);
+tog.addEventListener('click',function(){if(film.paused){film.play()}else{film.pause()}});
+document.getElementById('filmFull').addEventListener('click',function(){var f=film.requestFullscreen||film.webkitRequestFullscreen||film.webkitEnterFullscreen;if(!f)return;film.src='assets/kmpndi-film.mp4';film.currentTime=0;var r=f.call(film);film.play();if(r&&r.catch)r.catch(function(){film.src=LOOP;film.play()})});
+
+/* ───── Nav + rail state ───── */
+var nav=document.getElementById('nav'),rail=document.getElementById('rail');rail.classList.add('ready');
+var ids=['top','today','how','passes','ownership','everything','apps','egypt','contact'];
+var secs=ids.map(function(id){return document.getElementById(id)});
+function onScroll(){var y=window.scrollY,h=window.innerHeight;
+ var hero=secs[0].getBoundingClientRect();nav.classList.toggle('solid',hero.bottom<80);
+ var idx=0;secs.forEach(function(s,i){if(s.getBoundingClientRect().top<h*.45)idx=i});
+ rail.querySelectorAll('li').forEach(function(li,i){li.classList.toggle('on',i===idx);li.classList.toggle('done',i<idx)});
+}
+window.addEventListener('scroll',onScroll,{passive:true});
+
+/* ───── Reveal + stamps ───── */
+if('IntersectionObserver' in window&&!reduce){var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');e.target.querySelectorAll('.stamp').forEach(function(s,i){s.style.animationDelay=(.25+i*.12)+'s';s.classList.add('slam')});io.unobserve(e.target)}})},{rootMargin:'0px 0px -10% 0px'});
+ document.querySelectorAll('.rise').forEach(function(el){io.observe(el)})}
+else{document.querySelectorAll('.rise').forEach(function(el){el.classList.add('in')})}
+
+/* ───── Contact form → email ───── */
+var form=document.getElementById('leadForm'),card=document.getElementById('formCard');
+function check(id,ok){var f=document.getElementById(id).closest('.f');f.classList.toggle('bad',!ok);document.getElementById(id).setAttribute('aria-invalid',ok?'false':'true');return ok}
+form.addEventListener('submit',function(e){e.preventDefault();
+ var v=function(id){return document.getElementById(id).value.trim()};
+ var ok=[check('fName',v('fName').length>1),check('fCompany',v('fCompany').length>1),check('fEmail',/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v('fEmail')))];
+ if(ok.indexOf(false)>-1){var first=form.querySelector('.bad input,.bad select');if(first)first.focus();return}
+ var subject='Onboarding request: '+(v('fCompound')||v('fCompany'));
+ var body=['Name: '+v('fName'),'Developer / company: '+v('fCompany'),'Compound: '+(v('fCompound')||'-'),'Units: '+(document.getElementById('fUnits').value||'-'),'Phone / WhatsApp: '+(v('fPhone')||'-'),'Email: '+v('fEmail'),'','Message:',v('fMsg')||'-','','Sent from kmpndi.com'].join('\n');
+ window.location.href='mailto:'+CONTACT_EMAIL+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
+ card.classList.add('done');card.querySelector('.sent').focus&&card.querySelector('.sent h3').setAttribute('tabindex','-1');card.querySelector('.sent h3').focus()});
+['fName','fCompany','fEmail'].forEach(function(id){document.getElementById(id).addEventListener('input',function(){var f=this.closest('.f');if(f.classList.contains('bad'))f.classList.remove('bad')})});
+document.getElementById('again').addEventListener('click',function(){card.classList.remove('done');document.getElementById('fName').focus()});
+document.querySelectorAll('a[href^="mailto:"]').forEach(function(a){a.href='mailto:'+CONTACT_EMAIL;if(a.id==='directMail'||/@/.test(a.textContent))a.textContent=CONTACT_EMAIL});
+
+/* ───── Boot ───── */
+var saved=null;try{saved=localStorage.getItem('kmpndi-lang')}catch(e){}
+setLang(saved==='ar'?'ar':'en');onScroll();
+})();
+</script>
+</body>
+</html>

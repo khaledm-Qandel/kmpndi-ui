@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>kmpndi — The compound that runs itself</title>
+<meta name="description" content="kmpndi turns your compound's map into live gate access. Residents send their own QR passes, guards scan, and the pool, the shops and maintenance run on the same rights.">
+<meta name="theme-color" content="#0F3D33">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230F3D33'/%3E%3Cpath d='M16 12h9v22l12-12h11L34 35l15 17H38L25 38v14h-9z' fill='%23ECEAE3'/%3E%3Ccircle cx='50' cy='50' r='5' fill='%23C8643B'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anybody:wdth,wght@50..150,300..900&family=Lalezar&family=Readex+Pro:wght@300..700&display=swap">
+<style>
+:root{
+  --stone:#ECEAE3; --stone-deep:#DCD6C8; --forest:#0F3D33; --forest-2:#16493D; --forest-soft:#3F544D; --white:#FFFFFF; --sage:#1F6B55; --copper:#B4532C; --copper-ink:#8F3D1E; --go:#1F8F5F; --smoke:#F1F0EB; --mist:#CFE0D9;
+  --wide:"Anybody",system-ui,sans-serif; --text:"Readex Pro",system-ui,sans-serif; --ar-display:"Lalezar","Readex Pro",sans-serif;
+  --gutter:clamp(16px,4vw,56px); --max:1360px; --ease:cubic-bezier(.16,1,.3,1);
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:80px}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+body{margin:0;background:var(--stone);color:var(--forest);font-family:var(--text);font-size:clamp(16px,1.05vw,18px);line-height:1.55;overflow-x:hidden;caret-color:var(--copper)}
+::selection{background:var(--copper);color:var(--white)}
+:focus-visible{outline:3px solid var(--copper);outline-offset:3px;border-radius:6px}
+html{scrollbar-color:var(--forest) var(--stone)}
+a{color:inherit;text-underline-offset:.2em;text-decoration-thickness:2px}
+img,video,svg{display:block;max-width:100%}
+[hidden]{display:none!important}
+button{font:inherit;color:inherit}
+.wrap{max-width:var(--max);margin-inline:auto;padding-inline:var(--gutter)}
+.skip{position:fixed;inset-inline-start:12px;top:-60px;z-index:100;background:var(--forest);color:var(--stone);padding:10px 14px;border-radius:8px}.skip:focus{top:12px}
+h1,h2,h3{margin:0;font-family:var(--wide);text-wrap:balance}
+h2{font-weight:900;font-stretch:125%;font-size:clamp(2.3rem,5.4vw,5.2rem);line-height:.92;letter-spacing:-.02em;text-transform:uppercase}
+h3{font-weight:800;font-stretch:110%;font-size:1.3rem;line-height:1.1}
+html[lang="ar"] h1,html[lang="ar"] h2,html[lang="ar"] h3{font-family:var(--ar-display);font-weight:400;font-stretch:100%;text-transform:none;letter-spacing:0;line-height:1.25}
+html[lang="ar"] body{font-family:var(--text)}
+.lede{font-size:clamp(1.05rem,1.3vw,1.25rem);max-width:56ch;margin:0}
+.label{font-family:var(--wide);font-weight:800;font-stretch:120%;font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+html[lang="ar"] .label{font-family:var(--text);letter-spacing:0;font-size:.85rem;text-transform:none}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:.6em;border:0;cursor:pointer;text-decoration:none;font-family:var(--wide);font-weight:900;font-stretch:115%;font-size:1rem;letter-spacing:.01em;padding:1em 1.4em;border-radius:999px;text-transform:uppercase;transition:transform .3s var(--ease),background-color .2s,color .2s}
+html[lang="ar"] .btn{font-family:var(--text);font-weight:700;text-transform:none;font-stretch:100%}
+.btn svg{width:1.1em;height:1.1em;transition:transform .3s var(--ease)}
+html[dir="rtl"] .btn svg.arrow{transform:scaleX(-1)}
+.btn:hover svg.arrow{transform:translateX(4px)}html[dir="rtl"] .btn:hover svg.arrow{transform:scaleX(-1) translateX(4px)}
+.btn:active{transform:scale(.97)}
+.btn-ink{background:var(--forest);color:var(--stone)}.btn-ink:hover{background:var(--copper);color:var(--white)}
+.btn-sun{background:var(--stone);color:var(--forest)}.btn-sun:hover{background:var(--white)}
+
+/* Nav */
+.nav{position:fixed;inset:0 0 auto;z-index:50;background:var(--forest);color:var(--white)}
+.nav-in{display:flex;align-items:center;gap:clamp(12px,2vw,30px);height:68px;padding-inline:var(--gutter)}
+.brand{font-family:var(--wide);font-weight:900;font-stretch:140%;font-size:1.7rem;letter-spacing:-.02em;text-decoration:none;color:var(--stone);line-height:1}
+.brand b{color:var(--copper)}
+.nav-links{display:flex;gap:clamp(12px,1.8vw,28px);margin-inline-start:auto;font-size:.95rem}
+.nav-links a{text-decoration:none;opacity:.85}.nav-links a:hover{opacity:1;color:var(--stone)}
+.lang{border:0;cursor:pointer;background:transparent;color:var(--white);box-shadow:inset 0 0 0 2px rgba(255,255,255,.4);border-radius:999px;padding:8px 14px;font-family:var(--text);font-weight:600;min-width:70px}
+.lang:hover{box-shadow:inset 0 0 0 2px var(--stone);color:var(--stone)}
+.nav .btn{padding:.75em 1.1em;font-size:.9rem}
+@media (max-width:980px){.nav-links{display:none}.lang{margin-inline-start:auto}}
+@media (max-width:520px){.nav .btn span{display:none}.nav .btn{padding:.75em}}
+
+/* Hero: headline + the film as a billboard */
+.hero{position:relative;padding:calc(68px + clamp(24px,4vh,48px)) var(--gutter) clamp(24px,4vh,40px);min-height:100svh;display:grid;grid-template-columns:minmax(300px,.85fr) minmax(0,2.15fr);gap:clamp(24px,3vw,48px);align-items:center;overflow:hidden}
+.seams{position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(90deg,transparent 0 calc(100%/6 - 2px),rgba(0,0,0,.08) calc(100%/6 - 2px) calc(100%/6))}
+.hero-copy{position:relative}
+.hero h1{font-weight:900;font-stretch:125%;font-size:clamp(2.3rem,3.7vw,4.3rem);line-height:.9;letter-spacing:-.02em;text-transform:uppercase}
+html[lang="ar"] .hero h1{font-size:clamp(2.4rem,4vw,4.4rem);line-height:1.15}
+.hero .lede{margin-top:20px;font-size:clamp(1rem,1.1vw,1.12rem)}
+.hero-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:26px;align-items:center}
+.sticker{position:absolute;inset-inline-end:-14px;top:-40px;width:118px;height:118px;border-radius:50%;background:var(--copper);color:var(--white);display:grid;place-items:center;text-align:center;font-family:var(--wide);font-weight:900;font-stretch:120%;font-size:.95rem;line-height:1;transform:rotate(-12deg);text-transform:uppercase;z-index:3;animation:pop .8s .9s var(--ease) both}
+html[lang="ar"] .sticker{font-family:var(--ar-display);font-weight:400;text-transform:none;font-size:1.1rem}
+@keyframes pop{from{transform:rotate(-40deg) scale(0)}to{transform:rotate(-12deg) scale(1)}}
+.board{position:relative;justify-self:end;width:100%;max-width:calc((100svh - 190px) * 16 / 9)}
+.board-face{position:relative;background:var(--forest);padding:12px;border-radius:10px;box-shadow:0 30px 60px -20px rgba(0,0,0,.45)}
+.board-face video{width:100%;aspect-ratio:16/9;height:auto;object-fit:cover;border-radius:4px;background:var(--stone)}
+.board-face::after{content:"";position:absolute;inset:12px;pointer-events:none;border-radius:4px;background:repeating-linear-gradient(90deg,transparent 0 calc(100%/6 - 1px),rgba(0,0,0,.12) calc(100%/6 - 1px) calc(100%/6))}
+.legs{display:flex;justify-content:space-around;height:34px}
+.legs i{width:22px;background:var(--forest)}
+.film-ctrl{position:absolute;top:24px;inset-inline-start:24px;display:flex;gap:8px;z-index:2}
+.film-btn{display:inline-flex;align-items:center;gap:8px;border:0;cursor:pointer;background:var(--forest);color:var(--stone);padding:9px 14px;border-radius:999px;font-family:var(--wide);font-weight:800;font-stretch:115%;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+html[lang="ar"] .film-btn{font-family:var(--text);text-transform:none;font-size:.85rem}
+.film-btn:hover{background:var(--copper);color:var(--white)}
+.film-btn svg{width:13px;height:13px}
+@media (max-width:1000px){
+  .hero{grid-template-columns:1fr;min-height:0}
+  .board{order:-1;max-width:none;justify-self:stretch}
+  .sticker{top:-30px;width:96px;height:96px;font-size:.8rem}
+}
+@media (max-width:600px){.film-btn span{display:none}.film-btn{padding:10px}}
+
+/* Marquee band */
+.marquee{background:var(--forest);color:var(--stone);overflow:hidden;padding:18px 0;direction:ltr}
+.marquee-track{display:flex;gap:48px;width:max-content;animation:roll 40s linear infinite;font-family:var(--wide);font-weight:900;font-stretch:140%;font-size:clamp(1.3rem,2.4vw,2.2rem);text-transform:uppercase;white-space:nowrap}
+.marquee-track span::after{content:"";display:inline-block;width:.45em;height:.45em;border-radius:50%;background:var(--copper);margin-inline-start:48px;vertical-align:middle}
+@keyframes roll{to{transform:translateX(-50%)}}
+
+/* Sections as posters */
+section{position:relative;padding-block:clamp(80px,11vw,150px)}
+.poster-white{background:var(--white)}
+.poster-ink{background:var(--forest);color:var(--white)}
+.poster-sky{background:var(--sage);color:var(--white)}
+.poster-sky .truths svg{stroke:var(--white)}
+.poster-sky .truths li{border-color:rgba(255,255,255,.45)!important}
+.head{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:clamp(20px,4vw,64px);align-items:end;margin-bottom:clamp(40px,6vw,76px)}
+@media (max-width:900px){.head{grid-template-columns:1fr}}
+.poster-ink .lede{color:var(--mist)}
+.poster-ink h2{color:var(--stone)}
+
+/* Today: crossed-out billboard lines */
+.nolist{list-style:none;margin:0;padding:0;border-top:4px solid var(--forest)}
+.nolist li{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) auto;gap:clamp(16px,3vw,40px);align-items:center;padding:clamp(18px,2.4vw,28px) 0;border-bottom:4px solid var(--forest)}
+.nolist h3{font-weight:900;font-stretch:125%;font-size:clamp(1.3rem,2.4vw,2.2rem);text-transform:uppercase;text-decoration:line-through;text-decoration-color:var(--copper);text-decoration-thickness:.14em}
+html[lang="ar"] .nolist h3{text-decoration-thickness:.1em}
+.nolist p{margin:0;color:var(--forest-soft)}
+.nolist .tag{background:var(--copper);color:var(--white);border-radius:999px;padding:6px 14px;font-family:var(--wide);font-weight:900;font-stretch:115%;font-size:.8rem;text-transform:uppercase;white-space:nowrap}
+html[lang="ar"] .nolist .tag{font-family:var(--text);text-transform:none}
+@media (max-width:760px){.nolist li{grid-template-columns:1fr}.nolist .tag{justify-self:start}}
+.close-line{margin-top:clamp(36px,5vw,60px);font-family:var(--wide);font-weight:900;font-stretch:115%;font-size:clamp(1.4rem,2.6vw,2.4rem);line-height:1.08;max-width:30ch}
+html[lang="ar"] .close-line{font-family:var(--ar-display);font-weight:400;line-height:1.4}
+.close-line em{font-style:normal;color:var(--copper)}
+
+/* Inheritance plan */
+.inherit{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(280px,1fr);gap:clamp(20px,3vw,40px);align-items:start}
+@media (max-width:1000px){.inherit{grid-template-columns:1fr}}
+.plan{background:var(--white);border:4px solid var(--forest);border-radius:26px;padding:clamp(14px,2vw,24px)}
+.zone{position:relative;border:3px solid var(--forest);border-radius:18px;padding:40px 12px 12px;transition:border-color .3s,background-color .3s}
+.zone>.zl{position:absolute;top:9px;inset-inline-start:12px;font-family:var(--wide);font-weight:900;font-stretch:115%;font-size:12px;text-transform:uppercase;letter-spacing:.03em}
+html[lang="ar"] .zone>.zl{font-family:var(--text);text-transform:none;font-size:.85rem}
+.zone.lit{border-color:var(--copper);background:rgba(180,83,44,.08)}
+.zone.lit>.zl{color:var(--copper-ink)}
+.plan-grid{display:grid;grid-template-columns:1fr 1.3fr;gap:12px}
+.plan-col{display:grid;gap:12px;align-content:start}
+@media (max-width:620px){.plan-grid{grid-template-columns:1fr}}
+.units{display:flex;flex-wrap:wrap;gap:8px}
+.unit{appearance:none;border:0;cursor:pointer;min-width:64px;padding:13px 12px;border-radius:12px;background:var(--forest);color:var(--stone);font-family:var(--wide);font-weight:900;font-stretch:110%;font-size:.85rem;transition:transform .25s var(--ease),background-color .2s}
+.unit:hover{transform:translateY(-3px)}
+.unit[aria-pressed="true"]{background:var(--copper);color:var(--white)}
+.unit.pool{background:#BFE6E2;color:var(--forest)}.unit.shop{background:var(--mist);color:var(--forest)}
+.unit.pool[aria-pressed="true"],.unit.shop[aria-pressed="true"]{background:var(--copper);color:var(--white)}
+.gate-tab{display:inline-block;margin-top:12px;background:var(--forest);color:var(--stone);border-radius:999px;padding:7px 14px;font-family:var(--wide);font-weight:900;font-stretch:115%;font-size:.8rem;text-transform:uppercase}
+.gate-tab.lit{background:var(--copper);color:var(--white)}
+.result{position:sticky;top:96px;background:var(--forest);color:var(--white);border-radius:26px;padding:clamp(20px,2.4vw,30px)}
+.result .label{color:var(--stone)}
+.result h3{font-size:clamp(1.8rem,2.8vw,2.6rem);font-stretch:125%;font-weight:900;margin-top:6px;color:var(--stone)}
+.opens{list-style:none;margin:18px 0 0;padding:0}
+.opens li{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:2px solid rgba(255,255,255,.14);animation:rowin .4s var(--ease) both}
+.opens li:nth-child(2){animation-delay:.07s}.opens li:nth-child(3){animation-delay:.14s}.opens li:nth-child(4){animation-delay:.21s}
+@keyframes rowin{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:none}}
+.opens .tick{flex:none;width:26px;height:26px;border-radius:50%;background:var(--copper);display:grid;place-items:center}
+.opens .tick svg{width:14px;height:14px}
+.opens .why{margin-inline-start:auto;font-size:.8rem;color:#BDBDBD}
+.result p{color:var(--mist);margin:16px 0 0;font-size:.95rem}
+
+/* Pass flyers */
+.flyers{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+@media (max-width:1180px){.flyers{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:860px){.flyers{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:540px){.flyers{grid-template-columns:1fr}}
+.fly{position:relative;background:var(--white);color:var(--forest);border-radius:22px;overflow:hidden;display:flex;flex-direction:column;min-height:340px;transition:transform .4s var(--ease)}
+.fly:hover{transform:translateY(-6px) rotate(-1deg)}
+.fly .band{padding:14px 18px;font-family:var(--wide);font-weight:900;font-stretch:125%;font-size:1rem;text-transform:uppercase;display:flex;justify-content:space-between}
+html[lang="ar"] .fly .band{font-family:var(--text);text-transform:none}
+.fly .band small{font-family:var(--text);font-weight:500;font-size:.75rem;opacity:.75;text-transform:none}
+.fly .in{padding:16px 18px 18px;display:flex;flex-direction:column;flex:1}
+.fly h3{font-size:1.45rem;font-stretch:120%;font-weight:900}
+.fly .rows{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;font-size:.9rem}
+.fly .rows .label{font-size:11px;opacity:.6}
+.fly .foot{margin-top:auto;padding-top:14px;display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
+.fly .win{font-size:.85rem;font-weight:600;max-width:60%}
+.fly .qr{width:84px;height:84px;flex:none}
+.b-guest{background:#CFE3F0}.b-worker{background:var(--stone-deep)}.b-delivery{background:var(--copper);color:var(--white)}.b-vehicle{background:#BEE3CD}.b-family{background:#E8D6C8}
+.fly.dead{background:#D8D8D8}
+.fly.dead .band{background:#9A9A9A}
+.fly.dead .qr,.fly.dead h3,.fly.dead .rows{opacity:.45}
+.fly .void{position:absolute;inset-inline:-30px;top:48%;transform:rotate(-12deg);background:var(--copper);color:var(--white);text-align:center;padding:8px 0;font-family:var(--wide);font-weight:900;font-stretch:130%;font-size:1.3rem;text-transform:uppercase;letter-spacing:.06em}
+html[lang="ar"] .fly .void{font-family:var(--ar-display);font-weight:400;text-transform:none}
+.plate{display:inline-grid;grid-template-columns:auto auto;border:2px solid var(--forest);border-radius:6px;overflow:hidden;margin-top:8px;font-weight:700;font-size:.85rem}
+.plate span{padding:3px 8px}.plate span+span{border-inline-start:2px solid var(--forest)}
+.hint{margin-top:22px;color:var(--mist);font-size:.95rem}
+
+/* Ownership sequence */
+.seq{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(14px,2vw,24px)}
+@media (max-width:1000px){.seq{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.seq{grid-template-columns:1fr}}
+.step{border-top:6px solid var(--forest);padding-top:18px}
+.step .n{font-family:var(--wide);font-weight:900;font-stretch:150%;font-size:clamp(3rem,5vw,4.6rem);line-height:.9;color:var(--copper)}
+.step .when{margin-top:12px}
+.step h3{margin-top:8px}
+.step p{margin:8px 0 0;color:var(--forest-soft);font-size:.95rem}
+.who{display:inline-flex;align-items:center;gap:8px;margin-top:14px;background:var(--stone);border-radius:999px;padding:6px 14px 6px 6px;font-weight:600;font-size:.88rem}
+.who i{width:28px;height:28px;border-radius:50%;background:var(--forest);color:var(--stone);display:grid;place-items:center;font-style:normal;font-family:var(--wide);font-weight:900;font-size:.7rem}
+.fam{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.fam span{border:2px solid var(--forest);border-radius:999px;padding:3px 12px;font-size:.85rem;font-weight:600}
+.audit{margin-top:34px;padding:18px 22px;background:var(--forest);color:var(--white);border-radius:18px;display:flex;flex-wrap:wrap;gap:6px 28px}
+.audit b{color:var(--stone)}
+.note{margin-top:12px;font-size:.82rem;color:var(--forest-soft)}
+
+/* Capability wall */
+.wall{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+@media (max-width:1100px){.wall{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:760px){.wall{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:460px){.wall{grid-template-columns:1fr}}
+.tile{border-radius:22px;padding:22px 20px 24px;background:var(--white);min-height:200px;transition:transform .35s var(--ease)}
+.tile:nth-child(4n+2){background:var(--forest);color:var(--white)}
+.tile:nth-child(4n+2) p{color:var(--mist)}
+.tile:nth-child(6n+4){background:var(--mist);color:var(--forest)}
+.tile:nth-child(6n+4) p{color:var(--forest-soft)}
+.tile:hover{transform:rotate(-1.2deg) translateY(-4px)}
+.tile svg{width:38px;height:38px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tile h3{margin-top:22px;font-size:1.2rem}
+.tile p{margin:8px 0 0;font-size:.93rem;color:var(--forest-soft)}
+
+/* Apps strips */
+.strips{border-top:2px solid rgba(255,255,255,.2)}
+.strip{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1.5fr) auto;gap:clamp(16px,3vw,44px);align-items:center;padding:clamp(20px,2.6vw,32px) 0;border-bottom:2px solid rgba(255,255,255,.2)}
+.strip h3{font-weight:900;font-stretch:140%;font-size:clamp(1.5rem,3vw,2.6rem);color:var(--stone);text-transform:uppercase}
+html[lang="ar"] .strip h3{text-transform:none}
+.strip .whoa{margin:6px 0 0;color:#BDBDBD;font-size:.95rem}
+.strip .does{margin:0;color:var(--mist)}
+.strip .dev{border:2px solid var(--stone);color:var(--stone);border-radius:999px;padding:6px 14px;font-weight:600;font-size:.85rem;white-space:nowrap}
+@media (max-width:860px){.strip{grid-template-columns:1fr}.strip .dev{justify-self:start}}
+
+/* Egypt */
+.egypt-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:clamp(30px,5vw,80px);align-items:start}
+@media (max-width:900px){.egypt-grid{grid-template-columns:1fr}}
+.egy-ar{display:block;font-family:var(--ar-display);font-weight:400;font-size:clamp(3.4rem,8vw,7.4rem);line-height:1.1;margin-top:10px;text-transform:none;letter-spacing:0}
+.truths{list-style:none;margin:0;padding:0}
+.truths li{display:grid;grid-template-columns:48px 1fr;gap:16px;padding:18px 0;border-bottom:3px solid var(--forest)}
+.truths li:first-child{border-top:3px solid var(--forest)}
+.truths svg{width:34px;height:34px;fill:none;stroke:var(--forest);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.truths p{margin:4px 0 0}
+
+/* Contact */
+.contact-grid{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.2fr);gap:clamp(30px,5vw,80px);align-items:start}
+@media (max-width:980px){.contact-grid{grid-template-columns:1fr}}
+.contact h2{font-size:clamp(2.1rem,4.2vw,4.3rem)}
+.egypt-grid h2{font-size:clamp(2.1rem,4vw,4.1rem)}
+h2{overflow-wrap:break-word}
+.direct{margin-top:26px;font-weight:600}
+.direct a{font-family:var(--wide);font-weight:900;font-stretch:115%}
+.form{position:relative;background:var(--white);border:4px solid var(--forest);border-radius:28px;padding:clamp(22px,3vw,38px)}
+.form-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:20px}
+.form-head .t{font-family:var(--wide);font-weight:900;font-stretch:125%;font-size:1.5rem;text-transform:uppercase}
+html[lang="ar"] .form-head .t{font-family:var(--ar-display);font-weight:400;text-transform:none}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.fgrid .full{grid-column:1/-1}
+@media (max-width:560px){.fgrid{grid-template-columns:1fr}}
+.f label{display:block;margin-bottom:6px}
+.f input,.f select,.f textarea{width:100%;font:inherit;font-size:1rem;color:var(--forest);background:var(--smoke);border:3px solid transparent;border-radius:14px;padding:12px 14px;transition:border-color .2s,background-color .2s;accent-color:var(--copper)}
+.f textarea{min-height:110px;resize:vertical}
+.f input::placeholder,.f textarea::placeholder{color:#6A6A6A}
+.f input:hover,.f select:hover,.f textarea:hover{border-color:#BDBDBD}
+.f input:focus,.f select:focus,.f textarea:focus{outline:none;border-color:var(--forest);background:var(--white)}
+.f.bad input,.f.bad select,.f.bad textarea{border-color:var(--copper);background:#FFF1EC}
+.f .err{display:none;margin-top:6px;font-size:.85rem;color:#B52A06;font-weight:600}
+.f.bad .err{display:block}
+.f select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23111' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;background-size:18px;padding-inline-end:40px}
+html[dir="rtl"] .f select{background-position:left 12px center}
+.form-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;margin-top:22px}
+.form-foot small{color:var(--forest-soft);max-width:34ch}
+.sent{display:none}
+.form.done .sent{display:block;animation:rowin .5s var(--ease) both}
+.form.done form{display:none}
+.sent .big{display:inline-block;background:var(--go);color:var(--white);border-radius:999px;padding:8px 18px;font-family:var(--wide);font-weight:900;font-stretch:125%;text-transform:uppercase;margin-bottom:16px}
+html[lang="ar"] .sent .big{font-family:var(--text);text-transform:none}
+.sent h3{font-size:1.8rem;font-stretch:120%}
+.sent p{color:var(--forest-soft)}
+.btn-line{background:transparent;color:var(--forest);box-shadow:inset 0 0 0 3px var(--forest)}
+
+footer{background:var(--forest);color:var(--mist);padding-block:40px}
+footer .wrap{display:flex;flex-wrap:wrap;gap:16px 36px;align-items:center;justify-content:space-between}
+footer nav{display:flex;flex-wrap:wrap;gap:8px 22px}
+footer a{text-decoration:none}footer a:hover{color:var(--stone)}
+
+/* Reveal: pasted up from the left, visible without JS */
+.js .rise{clip-path:inset(0 100% 0 0);transition:clip-path .9s var(--ease)}
+html[dir="rtl"].js .rise{clip-path:inset(0 0 0 100%)}
+.js .rise.in{clip-path:inset(0 0 0 0)!important}
+@media (prefers-reduced-motion:reduce){.js .rise{clip-path:none!important}.marquee-track{animation:none}}
+</style>
+</head>
+<body>
+<a class="skip" href="#main" data-i18n="skip">Skip to content</a>
+<header class="nav" id="nav">
+  <div class="nav-in">
+    <a class="brand" href="#top" dir="ltr" aria-label="kmpndi home">kmpndi<b>.</b></a>
+    <nav class="nav-links" aria-label="Main">
+      <a href="#how" data-i18n="nav.how">How it works</a>
+      <a href="#passes" data-i18n="nav.passes">Passes</a>
+      <a href="#everything" data-i18n="nav.all">The whole compound</a>
+      <a href="#apps" data-i18n="nav.apps">Apps</a>
+    </nav>
+    <button class="lang" id="lang" type="button">عربي</button>
+    <a class="btn btn-sun" href="#contact"><span data-i18n="nav.cta">Talk to us</span><svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+  </div>
+</header>
+
+<main id="main">
+<section class="hero" id="top" aria-labelledby="hero-title" style="padding-bottom:clamp(24px,4vh,40px)">
+  <div class="seams" aria-hidden="true"></div>
+  <div class="hero-copy">
+    <h1 id="hero-title" data-i18n="hero.title">The compound that runs itself.</h1>
+    <p class="lede" data-i18n-html="hero.lede">kmpndi turns your compound's map (zones, buildings, units, owners) into live gate access. <strong>Residents issue their own QR passes. Guards scan. You stop managing lists.</strong></p>
+    <div class="hero-actions">
+      <a class="btn btn-ink" href="#contact"><span data-i18n="hero.cta">Talk to the kmpndi team</span><svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+    </div>
+  </div>
+  <div class="board">
+    <span class="sticker" aria-hidden="true" data-i18n="v2.sticker">Made for Egypt</span>
+    <div class="board-face">
+      <video id="film" autoplay muted loop playsinline preload="auto" poster="assets/hero-poster.jpg" aria-label="kmpndi film: a resident sends a guest pass on WhatsApp, the guard scans it, the barrier lifts and the car drives in."><source src="assets/hero.mp4" type="video/mp4"></video>
+      <div class="film-ctrl">
+        <button class="film-btn" id="filmToggle" type="button" aria-pressed="false">
+          <svg id="icPause" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+          <svg id="icPlay" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" hidden><path d="M7 5l12 7-12 7z"/></svg>
+          <span data-i18n="film.pause">Pause film</span>
+        </button>
+        <button class="film-btn" id="filmFull" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span data-i18n="v2.full">Full screen</span></button>
+      </div>
+    </div>
+    <div class="legs" aria-hidden="true"><i></i><i></i></div>
+  </div>
+</section>
+
+<div class="marquee" aria-hidden="true"><div class="marquee-track">
+  <span>No lists</span><span>No calls</span><span>No paper</span><span>QR · NFC · WhatsApp</span><span>من غير ورق</span><span>Access follows ownership</span>
+  <span>No lists</span><span>No calls</span><span>No paper</span><span>QR · NFC · WhatsApp</span><span>من غير ورق</span><span>Access follows ownership</span>
+</div></div>
+
+<section class="poster-white" id="today" aria-labelledby="today-title">
+  <div class="wrap">
+    <div class="head"><h2 id="today-title" class="rise" data-i18n="today.title">Your gate still runs on paper.</h2><p class="lede" data-i18n="today.lede">Guest lists on WhatsApp. Worker cards nobody checks. Tenants who moved out months ago and still wave their way in. The guard does their best with what they're given, and what they're given is guesswork.</p></div>
+    <ul class="nolist">
+      <li class="rise"><h3 data-i18n="today.h1">A blurry photo of an ID card</h3><p data-i18n="today.p1">Forwarded three times on WhatsApp. The guard can't tell whose guest it is.</p><span class="tag" data-i18n="today.s1">Unreadable</span></li>
+      <li class="rise"><h3 data-i18n="today.h2">A laminated card from last year</h3><p data-i18n="today.p2">The contract ended, but the card still gets a nod at the gate.</p><span class="tag" data-i18n="today.s2">Expired</span></li>
+      <li class="rise"><h3 data-i18n="today.h3">A face the guard remembers</h3><p data-i18n="today.p3">The lease ended in spring. Nobody told the gate.</p><span class="tag" data-i18n="today.s3">Revoked?</span></li>
+      <li class="rise"><h3 data-i18n="today.h4">Three calls to three villas</h3><p data-i18n="today.p4">Nobody answers, the order waits at the barrier, and the resident is angry.</p><span class="tag" data-i18n="today.s4">Unknown</span></li>
+    </ul>
+    <p class="close-line rise" data-i18n-html="today.close">kmpndi replaces the guesswork with <em>one rule the gate can check</em>: who owns or lives in the unit, and who they said may come in.</p>
+  </div>
+</section>
+
+<section id="how" aria-labelledby="how-title">
+  <div class="seams" aria-hidden="true"></div>
+  <div class="wrap" style="position:relative">
+    <div class="head"><h2 id="how-title" class="rise" data-i18n="how.title">Map it once. Access inherits.</h2><p class="lede" data-i18n-html="how.lede">You draw your compound in the admin app: gates, zones inside zones, buildings, units. <strong>Grant a unit and kmpndi opens its building, every zone around it, and the main gate.</strong> Try it: pick a unit.</p></div>
+    <div class="inherit">
+      <div class="plan" aria-label="Example compound plan">
+        <div class="zone" data-z="gc">
+          <div class="zl" data-i18n="how.hint">Example compound · pick a unit</div>
+          <div class="plan-grid">
+            <div class="plan-col">
+              <div class="zone" data-z="twr"><div class="zl" data-i18n="how.twr">Tower A2 · lobby door</div><div class="units">
+                <button class="unit" type="button" data-u="A2-3" aria-pressed="false">A2-3</button><button class="unit" type="button" data-u="A2-7" aria-pressed="false">A2-7</button><button class="unit" type="button" data-u="A2-12" aria-pressed="false">A2-12</button><button class="unit" type="button" data-u="A2-18" aria-pressed="false">A2-18</button></div></div>
+              <div class="zone" data-z="club"><div class="zl" data-i18n="how.club">Clubhouse · facilities</div><div class="units">
+                <button class="unit pool" type="button" data-u="POOL" aria-pressed="false" data-i18n="how.pool">Pool</button><button class="unit pool" type="button" data-u="GYM" aria-pressed="false" data-i18n="how.gym">Gym</button></div></div>
+              <div class="zone" data-z="shops"><div class="zl" data-i18n="how.shops">Commercial strip</div><div class="units">
+                <button class="unit shop" type="button" data-u="SHOP-3" aria-pressed="false" data-i18n="how.shop">Pharmacy</button></div></div>
+            </div>
+            <div class="zone" data-z="vzb"><div class="zl" data-i18n="how.vzb">Villa Zone B · barrier</div>
+              <div class="units" style="margin-bottom:12px"><button class="unit" type="button" data-u="V-03" aria-pressed="false">V-03</button><button class="unit" type="button" data-u="V-05" aria-pressed="false">V-05</button><button class="unit" type="button" data-u="V-08" aria-pressed="false">V-08</button></div>
+              <div class="zone" data-z="vip"><div class="zl" data-i18n="how.vip">VIP Zone · gate</div><div class="units">
+                <button class="unit" type="button" data-u="V-14" aria-pressed="true">V-14</button><button class="unit" type="button" data-u="V-16" aria-pressed="false">V-16</button></div></div>
+            </div>
+          </div>
+          <span class="gate-tab" id="gateTab" data-i18n="how.gc">Compound · Main gate A</span>
+        </div>
+      </div>
+      <aside class="result" aria-live="polite">
+        <div class="label" data-i18n="how.grant">Access granted to</div>
+        <h3 id="grantTitle">Villa V-14</h3>
+        <ul class="opens" id="opens"></ul>
+        <p id="grantNote"></p>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<section class="poster-ink" id="passes" aria-labelledby="passes-title">
+  <div class="wrap">
+    <div class="head"><h2 id="passes-title" class="rise" data-i18n="passes.title">One pass for every kind of visit.</h2><p class="lede" data-i18n-html="passes.lede">Residents create them in the app and send them on WhatsApp. Every pass comes from the resident's own right, so <strong>it can never outlast it</strong>. The gate checks the window, not the guard's memory.</p></div>
+    <div class="flyers" id="flyers"></div>
+    <p class="hint" data-i18n="passes.hint">The last three are what the gate sees when a pass isn't good.</p>
+  </div>
+</section>
+
+<section class="poster-white" id="ownership" aria-labelledby="own-title">
+  <div class="wrap">
+    <div class="head"><h2 id="own-title" class="rise" data-i18n="own.title">Sell a unit. The keys change hands.</h2><p class="lede" data-i18n="own.lede">Access in kmpndi comes from ownership and occupancy, recorded like a title deed. When a unit is sold or leased, the right people gain access and the wrong people lose it, automatically. Nobody has to remember to update the gate.</p></div>
+    <div class="seq">
+      <div class="step rise"><div class="n">1</div><div class="label when" data-i18n="own.w1">Day 0 · handover</div><h3 data-i18n="own.h1">The developer owns every unit</h3><p data-i18n="own.p1">Every unit starts with the developer on the record.</p><span class="who"><i>PD</i><span data-i18n="own.d1">Developer</span></span></div>
+      <div class="step rise"><div class="n">2</div><div class="label when" data-i18n="own.w2">Sale recorded</div><h3 data-i18n="own.h2">Ownership moves to the buyer</h3><p data-i18n="own.p2">kmpndi makes the buyer the resident and gives them access to the unit, its zone and the main gate.</p><span class="who"><i>NH</i><span data-i18n="own.d2">Nour Hassan · owner</span></span></div>
+      <div class="step rise"><div class="n">3</div><div class="label when" data-i18n="own.w3">Family added</div><h3 data-i18n="own.h3">Her family gets in too</h3><p data-i18n="own.p3">Each family member gets their own access, and it ends the day they leave the family.</p><div class="fam"><span data-i18n="own.f1">Spouse</span><span data-i18n="own.f2">Son</span><span data-i18n="own.f3">Daughter</span><span data-i18n="own.f4">Mother</span></div></div>
+      <div class="step rise"><div class="n">4</div><div class="label when" data-i18n="own.w4">Leased</div><h3 data-i18n="own.h4">The tenant takes over the gate</h3><p data-i18n="own.p4">While a tenant lives there, only the tenant can invite guests. The owner's access pauses and comes back when the lease ends.</p><span class="who"><i>KS</i><span data-i18n="own.d4">Karim Saleh · tenant</span></span></div>
+    </div>
+    <div class="audit"><span data-i18n-html="own.a1"><b>Every change is recorded:</b> who granted what, to whom, and when.</span><span data-i18n="own.a2">Companies work the same way: their admins manage their staff's access.</span></div>
+    <p class="note" data-i18n="own.note">Names are illustrative.</p>
+  </div>
+</section>
+
+<section id="everything" aria-labelledby="all-title">
+  <div class="seams" aria-hidden="true"></div>
+  <div class="wrap" style="position:relative">
+    <div class="head"><h2 id="all-title" class="rise" data-i18n="all.title">The rest of compound life rides the same rights.</h2><p class="lede" data-i18n="all.lede">Once kmpndi knows who lives where, everything else in the compound runs on that record: the pool, the pharmacy, the broken AC, the second car.</p></div>
+    <div class="wall" id="wall"></div>
+  </div>
+</section>
+
+<section class="poster-ink" id="apps" aria-labelledby="apps-title">
+  <div class="wrap">
+    <div class="head"><h2 id="apps-title" class="rise" data-i18n="apps.title">Four apps. One set of rights.</h2><p class="lede" data-i18n="apps.lede">Each person gets the app for their job, and every app reads the same ownership and access record.</p></div>
+    <div class="strips" id="strips"></div>
+  </div>
+</section>
+
+<section class="poster-sky" id="egypt" aria-labelledby="egypt-title">
+  <div class="wrap egypt-grid">
+    <h2 id="egypt-title" class="rise"><span data-i18n="egypt.title">Made for how Egyptian compounds work.</span><span class="egy-ar" id="egyptAlt" lang="ar" dir="rtl">صُنع لمصر</span></h2>
+    <ul class="truths" id="truths"></ul>
+  </div>
+</section>
+
+<section class="contact" id="contact" aria-labelledby="contact-title">
+  <div class="seams" aria-hidden="true"></div>
+  <div class="wrap contact-grid" style="position:relative">
+    <div>
+      <h2 id="contact-title" class="rise" data-i18n="contact.title">Put your compound on kmpndi.</h2>
+      <p class="lede" style="margin-top:22px" data-i18n="contact.lede">Tell us about your compound. The kmpndi team will walk you through setup. If you'd rather not map it yourself, we can import it from your spreadsheets.</p>
+      <p class="direct"><span data-i18n="contact.or">Or write directly</span><br><a href="mailto:sales@kmpndi.com">sales@kmpndi.com</a></p>
+    </div>
+    <div class="form" id="formCard">
+      <form id="leadForm" novalidate>
+        <div class="form-head"><span class="t" data-i18n="form.t">Onboarding request</span></div>
+        <div class="fgrid">
+          <div class="f"><label class="label" for="fName" data-i18n="form.name">Your name</label><input id="fName" autocomplete="name" required><div class="err" data-i18n="form.eName">Add your name so we know who to ask for.</div></div>
+          <div class="f"><label class="label" for="fCompany" data-i18n="form.company">Developer / company</label><input id="fCompany" autocomplete="organization" required><div class="err" data-i18n="form.eCompany">Add the developer or company name.</div></div>
+          <div class="f"><label class="label" for="fCompound" data-i18n="form.compound">Compound name</label><input id="fCompound"></div>
+          <div class="f"><label class="label" for="fUnits" data-i18n="form.units">Number of units</label><select id="fUnits"><option value="" data-i18n="form.u0">Choose a range</option><option value="Under 500" data-i18n="form.u1">Under 500</option><option value="500 – 2,000" data-i18n="form.u2">500 – 2,000</option><option value="2,000 – 5,000" data-i18n="form.u3">2,000 – 5,000</option><option value="5,000+" data-i18n="form.u4">5,000 or more</option></select></div>
+          <div class="f"><label class="label" for="fPhone" data-i18n="form.phone">Phone / WhatsApp</label><input id="fPhone" type="tel" autocomplete="tel" placeholder="+20 10 0000 0000" dir="ltr"></div>
+          <div class="f"><label class="label" for="fEmail" data-i18n="form.email">Email</label><input id="fEmail" type="email" autocomplete="email" required dir="ltr"><div class="err" data-i18n="form.eEmail">Enter an email we can reply to, like name@company.com.</div></div>
+          <div class="f full"><label class="label" for="fMsg" data-i18n="form.msg">What should we know?</label><textarea id="fMsg" data-i18n-ph="form.msgph" placeholder="Gates, current system, when you're handing over units…"></textarea></div>
+        </div>
+        <div class="form-foot"><small data-i18n="form.note">Sending opens your email app with the message ready to send to the kmpndi team.</small>
+          <button class="btn btn-ink" type="submit"><span data-i18n="form.send">Send to the kmpndi team</span><svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></div>
+      </form>
+      <div class="sent" role="status"><span class="big" data-i18n="sent.stamp">Issued</span><h3 data-i18n="sent.t">Your email is ready to send.</h3><p data-i18n-html="sent.p">We've opened your email app with the message filled in. Press send there. If nothing opened, write to <a href="mailto:sales@kmpndi.com">sales@kmpndi.com</a>.</p><button class="btn btn-line" type="button" id="again" data-i18n="sent.again">Edit the request</button></div>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer><div class="wrap"><a class="brand" href="#top" dir="ltr">kmpndi<b>.</b></a><nav aria-label="Footer"><a href="#how" data-i18n="nav.how">How it works</a><a href="#everything" data-i18n="nav.all">The whole compound</a><a href="#contact" data-i18n="nav.cta">Talk to us</a><a href="mailto:sales@kmpndi.com">sales@kmpndi.com</a></nav><span>© 2026 kmpndi</span></div></footer>
+
+<script src="../shared/kmpndi-content.js"></script>
+<script>
+(function(){
+var K=window.KMP;
+var TICK='<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>';
+var BAND={Guest:'b-guest',Worker:'b-worker',Delivery:'b-delivery',Vehicle:'b-vehicle',Family:'b-family',Tenant:'b-worker'};
+var current='V-14';
+function grant(u,tx,lang){current=u;var d=K.UNITS[u];
+ document.querySelectorAll('.unit').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.u===u?'true':'false')});
+ document.querySelectorAll('.zone').forEach(function(z){z.classList.toggle('lit',d.chain.indexOf(z.dataset.z)>-1)});
+ document.getElementById('gateTab').classList.add('lit');
+ document.getElementById('grantTitle').textContent=tx(d.t);
+ var rows=[{t:tx(d.t),why:lang==='ar'?'الملكية':'Ownership'}].concat(d.doors.map(function(x){return {t:tx(x),why:lang==='ar'?'متوارث':'Inherited'}}));
+ document.getElementById('opens').innerHTML=rows.map(function(r){return '<li><span class="tick">'+TICK+'</span><span>'+r.t+'</span><span class="why">'+r.why+'</span></li>'}).join('');
+ document.getElementById('grantNote').textContent=tx(d.note)}
+window.KMP_PAGE={
+ ar:{'v2.sticker':'صُنع لمصر','v2.full':'ملء الشاشة'},
+ render:function(tx,lang){
+  document.getElementById('flyers').innerHTML=K.PASSES.map(function(p){
+   return '<article class="fly'+(p.dead?' dead':'')+'"><div class="band '+(p.dead?'':BAND[p.cls.en]||'b-guest')+'"><span>'+tx(p.cls)+'</span><small dir="ltr">KMP-'+(1000+p.seed*37)+'</small></div>'+
+   '<div class="in"><h3>'+tx(p.name)+'</h3>'+(p.plate?'<div class="plate"><span>ABC 123</span><span lang="ar">أ ب ج ١٢٣</span></div>':'')+
+   '<div class="rows">'+p.rows.map(function(r){return '<div><div class="label">'+tx(r[0])+'</div>'+tx(r[1])+'</div>'}).join('')+'</div>'+
+   '<div class="foot"><div class="win">'+tx(p.win)+'</div>'+K.qr(p.seed,'#0F3D33')+'</div></div>'+(p.dead?'<div class="void">'+tx(p.stamp)+'</div>':'')+'</article>'}).join('');
+  document.getElementById('wall').innerHTML=K.MODS.map(function(m){return '<article class="tile"><svg viewBox="0 0 24 24" aria-hidden="true">'+K.IC[m.k]+'</svg><h3>'+tx(m.t)+'</h3><p>'+tx(m.p)+'</p></article>'}).join('');
+  document.getElementById('strips').innerHTML=K.APPS.map(function(a){return '<article class="strip"><div><h3>'+tx(a.t)+'</h3><p class="whoa">'+tx(a.who)+'</p></div><p class="does">'+tx(a.does)+'</p><span class="dev">'+tx(a.dev)+'</span></article>'}).join('');
+  document.getElementById('truths').innerHTML=K.TRUTHS.map(function(t){return '<li><svg viewBox="0 0 24 24" aria-hidden="true">'+K.IC[t.i]+'</svg><div><h3>'+tx(t.t)+'</h3><p>'+tx(t.p)+'</p></div></li>'}).join('');
+  var alt=document.getElementById('egyptAlt');alt.textContent=lang==='ar'?'Made for Egypt.':'صُنع لمصر';alt.lang=lang==='ar'?'en':'ar';alt.dir=lang==='ar'?'ltr':'rtl';alt.style.fontFamily=lang==='ar'?'var(--wide)':'';
+  grant(current,tx,lang);
+ }
+};
+document.querySelectorAll('.unit').forEach(function(b){b.addEventListener('click',function(){grant(b.dataset.u,K.tx,K.getLang())})});
+})();
+</script>
+<script src="../shared/kmpndi-core.js"></script>
+</body>
+</html>

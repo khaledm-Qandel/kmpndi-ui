@@ -1,0 +1,502 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>kmpndi — The compound that runs itself</title>
+<meta name="description" content="kmpndi draws your compound as one network: gates, zones, buildings and units. Every pass is a trip the gate can check, and facilities, shops and maintenance run on the same lines.">
+<meta name="theme-color" content="#0072CE">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='22' fill='none' stroke='%23E4002B' stroke-width='9'/%3E%3Crect x='4' y='25' width='56' height='14' fill='%230072CE'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@400..800&family=Overpass+Mono:wght@400..700&family=Overpass:wght@300..900&display=swap">
+<style>
+:root{
+  --ground:#F4F6F8; --white:#FFFFFF; --ink:#1B1F24; --ink-2:#262C33; --soft:#56606B; --rule:#D5DBE1;
+  --blue:#0072CE; --red:#E4002B; --green:#00A650; --yellow:#FFB81C; --purple:#7D4FC1;
+  --sans:"Overpass",system-ui,sans-serif; --mono:"Overpass Mono",ui-monospace,monospace; --ar:"Noto Kufi Arabic","Overpass",sans-serif;
+  --gutter:clamp(16px,4vw,64px); --max:1280px; --ease:cubic-bezier(.16,1,.3,1);
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:84px}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:clamp(16px,1.05vw,18px);line-height:1.6;overflow-x:hidden;caret-color:var(--blue)}
+html[lang="ar"] body{font-family:var(--ar);line-height:1.8}
+::selection{background:var(--blue);color:#fff}
+:focus-visible{outline:3px solid var(--blue);outline-offset:3px;border-radius:6px}
+html{scrollbar-color:#9AA6B2 var(--ground)}
+a{color:inherit;text-underline-offset:.2em}
+img,video,svg{display:block;max-width:100%}
+[hidden]{display:none!important}
+button{font:inherit;color:inherit}
+.wrap{max-width:var(--max);margin-inline:auto;padding-inline:var(--gutter)}
+.skip{position:fixed;inset-inline-start:12px;top:-60px;z-index:100;background:var(--ink);color:#fff;padding:10px 14px;border-radius:8px}.skip:focus{top:12px}
+h1,h2,h3{margin:0;font-family:var(--sans);text-wrap:balance;letter-spacing:-.02em}
+h2{font-weight:900;font-size:clamp(2.2rem,4.6vw,4.2rem);line-height:1}
+h3{font-weight:800;font-size:1.2rem;line-height:1.2}
+html[lang="ar"] h1,html[lang="ar"] h2,html[lang="ar"] h3{font-family:var(--ar);letter-spacing:0;line-height:1.35}
+html[lang="ar"] h2{font-weight:800;font-size:clamp(1.9rem,3.8vw,3.4rem)}
+.lede{font-size:clamp(1.05rem,1.25vw,1.2rem);max-width:58ch;color:var(--soft);margin:0}
+.lede strong{color:var(--ink)}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.label{font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--soft)}
+html[lang="ar"] .label{font-family:var(--ar);letter-spacing:0;text-transform:none;font-size:.82rem}
+
+.btn{display:inline-flex;align-items:center;gap:.6em;border:0;cursor:pointer;text-decoration:none;font-family:var(--sans);font-weight:800;font-size:1rem;padding:.9em 1.3em;border-radius:12px;transition:transform .3s var(--ease),background-color .2s,box-shadow .2s}
+html[lang="ar"] .btn{font-family:var(--ar);font-weight:700}
+.btn svg{width:1.1em;height:1.1em;transition:transform .3s var(--ease)}
+html[dir="rtl"] .btn svg.arrow{transform:scaleX(-1)}
+.btn:hover svg.arrow{transform:translateX(4px)}html[dir="rtl"] .btn:hover svg.arrow{transform:scaleX(-1) translateX(4px)}
+.btn:active{transform:scale(.98)}
+.btn-blue{background:var(--blue);color:#fff}.btn-blue:hover{background:#005FAD}
+.btn-white{background:#fff;color:var(--blue)}.btn-white:hover{box-shadow:0 0 0 4px rgba(255,255,255,.35)}
+.btn-ink{background:var(--ink);color:#fff}.btn-ink:hover{background:var(--blue)}
+.btn-line{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 2px var(--ink)}
+
+/* Nav with a four-line stripe */
+.nav{position:fixed;inset:0 0 auto;z-index:50;background:rgba(255,255,255,.96);backdrop-filter:saturate(1.2) blur(8px);box-shadow:0 1px 0 var(--rule)}
+.nav::after{content:"";position:absolute;inset:auto 0 -5px;height:5px;background:linear-gradient(90deg,var(--red) 0 25%,var(--yellow) 25% 50%,var(--green) 50% 75%,var(--purple) 75%)}
+.nav-in{display:flex;align-items:center;gap:clamp(12px,2vw,28px);height:68px;padding-inline:var(--gutter)}
+.brand{display:inline-flex;align-items:center;gap:10px;text-decoration:none;font-weight:900;font-size:1.5rem;letter-spacing:-.02em}
+.roundel{position:relative;width:34px;height:34px;flex:none}
+.roundel::before{content:"";position:absolute;inset:0;border-radius:50%;border:6px solid var(--red)}
+.roundel::after{content:"";position:absolute;left:-5px;right:-5px;top:50%;height:10px;margin-top:-5px;background:var(--blue)}
+.nav-links{display:flex;gap:clamp(12px,1.8vw,28px);margin-inline-start:auto;font-weight:600;font-size:.95rem}
+.nav-links a{text-decoration:none;color:var(--soft)}.nav-links a:hover{color:var(--ink)}
+.lang{border:0;cursor:pointer;background:var(--ground);color:var(--ink);border-radius:10px;padding:9px 14px;font-family:var(--ar);font-weight:700;min-width:70px}
+html[lang="ar"] .lang{font-family:var(--sans)}
+.lang:hover{background:var(--rule)}
+.nav .btn{padding:.7em 1.05em;font-size:.95rem}
+@media (max-width:980px){.nav-links{display:none}.lang{margin-inline-start:auto}}
+@media (max-width:520px){.nav .btn span{display:none}.nav .btn{padding:.7em}}
+
+/* Hero: the film, then the station-name sign */
+.hero{position:relative;padding:calc(73px + clamp(16px,2.4vh,28px)) var(--gutter) clamp(28px,5vh,56px);background-image:linear-gradient(var(--rule) 1px,transparent 1px),linear-gradient(90deg,var(--rule) 1px,transparent 1px);background-size:40px 40px;background-position:-1px -1px}
+.hero-stack{margin-inline:auto;width:100%;max-width:calc((100svh - 260px) * 16 / 9)}
+.screen{position:relative;border-radius:22px;overflow:hidden;background:var(--ground);box-shadow:0 0 0 1px var(--rule),0 30px 60px -30px rgba(20,40,60,.35)}
+.screen video{width:100%;aspect-ratio:16/9;height:auto;object-fit:cover}
+.film-ctrl{position:absolute;top:14px;inset-inline-end:14px;display:flex;gap:8px}
+.film-btn{display:inline-flex;align-items:center;gap:8px;border:0;cursor:pointer;background:var(--ink);color:#fff;padding:9px 14px;border-radius:10px;font-family:var(--mono);font-weight:600;font-size:12px;letter-spacing:.06em;text-transform:uppercase}
+html[lang="ar"] .film-btn{font-family:var(--ar);text-transform:none;letter-spacing:0;font-size:.85rem}
+.film-btn:hover{background:var(--blue)}
+.film-btn svg{width:13px;height:13px}
+.sign{position:relative;margin-top:-26px;margin-inline:clamp(10px,2vw,28px);background:var(--blue);color:#fff;border-radius:16px;padding:clamp(16px,2vw,22px) clamp(18px,2.4vw,30px);display:flex;align-items:center;gap:clamp(14px,2vw,26px);box-shadow:0 20px 40px -20px rgba(0,50,100,.6);animation:signIn .9s .3s var(--ease) both}
+@keyframes signIn{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+.sign .roundel{width:56px;height:56px}
+.sign .roundel::before{border-width:9px;border-color:#fff}
+.sign .roundel::after{background:var(--red);height:14px;margin-top:-7px;left:-7px;right:-7px}
+.sign h1{font-weight:900;font-size:clamp(1.5rem,2.5vw,2.4rem);line-height:1.05;flex:1}
+html[lang="ar"] .sign h1{font-weight:800;line-height:1.35}
+.hero-lede{margin:18px auto 0;max-width:calc((100svh - 260px) * 16 / 9);padding-inline:clamp(10px,2vw,28px);color:var(--soft);font-size:clamp(.98rem,1.05vw,1.08rem)}
+.hero-lede strong{color:var(--ink)}
+@media (max-width:760px){.sign{flex-wrap:wrap;margin-inline:0}.sign .btn{width:100%;justify-content:space-between}.hero-stack{max-width:none}.film-btn span{display:none}.film-btn{padding:10px}}
+
+/* Route line through the page */
+main{position:relative}
+.route-line{position:absolute;inset-block:0;inset-inline-start:calc(var(--gutter) / 2 - 4px);width:8px;border-radius:4px;background:var(--red);opacity:.9;display:none}
+section{position:relative;padding-block:clamp(80px,10vw,140px)}
+.stop{position:absolute;inset-inline-start:calc(var(--gutter) / 2 - 15px);top:calc(clamp(80px,10vw,140px) + 8px);width:30px;height:30px;border-radius:50%;background:#fff;border:7px solid var(--ink);display:none}
+@media (min-width:1180px){.route-line,.stop{display:block}}
+.head{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:clamp(20px,4vw,64px);align-items:end;margin-bottom:clamp(36px,5vw,64px)}
+@media (max-width:900px){.head{grid-template-columns:1fr}}
+.on-white{background:var(--white)}
+.on-ink{background:var(--ink);color:#fff}
+.on-ink .lede{color:#B8C2CC}.on-ink .lede strong{color:#fff}
+
+/* Today: service notices */
+.notices{background:var(--white);border-radius:20px;box-shadow:0 0 0 1px var(--rule);overflow:hidden}
+.notice{display:grid;grid-template-columns:150px minmax(0,1fr) minmax(0,1.1fr) 150px;gap:18px;align-items:center;padding:20px 24px;border-top:1px solid var(--rule)}
+.notice:first-child{border-top:0}
+.notice h3{font-size:1.1rem}
+.notice p{margin:0;color:var(--soft);font-size:.95rem}
+.status{justify-self:end;display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-weight:700;font-size:.8rem;text-transform:uppercase;color:var(--red)}
+html[lang="ar"] .status{font-family:var(--ar);text-transform:none}
+.status::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--red)}
+@media (max-width:860px){.notice{grid-template-columns:1fr;gap:6px}.status{justify-self:start}}
+.today-close{margin-top:clamp(34px,4vw,54px);font-weight:800;font-size:clamp(1.4rem,2.4vw,2.1rem);line-height:1.25;max-width:32ch}
+.today-close em{font-style:normal;color:var(--blue)}
+
+/* Inheritance diagram */
+.inherit{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(280px,1fr);gap:clamp(20px,3vw,36px);align-items:start}
+@media (max-width:1000px){.inherit{grid-template-columns:1fr}}
+.diagram{background:var(--white);border-radius:22px;box-shadow:0 0 0 1px var(--rule);padding:clamp(12px,2vw,24px)}
+.diagram svg{width:100%;height:auto;overflow:visible}
+.diagram .ln{fill:none;stroke-width:12;stroke-linecap:round;stroke-linejoin:round;transition:opacity .3s}
+.diagram.routing .ln{opacity:.22}
+.diagram .route{fill:none;stroke-width:16;stroke-linecap:round;stroke-linejoin:round}
+.diagram .route.draw{animation:draw .7s var(--ease) both}
+@keyframes draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+.stn{cursor:pointer}
+.stn circle{fill:#fff;stroke:var(--ink);stroke-width:5;transition:fill .2s,r .2s}
+.stn text{font-family:var(--sans);font-weight:800;font-size:19px;fill:var(--ink)}
+html[lang="ar"] .stn text,html[lang="ar"] .zst text,html[lang="ar"] .cap-l{font-family:var(--ar)}
+.stn:hover circle{fill:var(--yellow)}
+.stn:focus{outline:none}.stn:focus-visible circle{stroke:var(--blue);stroke-width:7}
+.stn[aria-pressed="true"] circle{fill:var(--ink)}
+.zst circle.o{fill:#fff;stroke:var(--ink);stroke-width:5}
+.zst circle.i{fill:#fff}
+.zst text{font-family:var(--sans);font-weight:700;font-size:17px;fill:var(--soft)}
+.zst.open circle.o{fill:var(--green);stroke:var(--green)}
+.zst.open text{fill:var(--ink)}
+.cap{fill:#fff;stroke:var(--ink);stroke-width:6;transition:fill .3s}
+.cap.open{fill:var(--green);stroke:var(--green)}
+.cap-l{font-family:var(--sans);font-weight:900;font-size:19px;fill:var(--ink)}
+.journey{position:sticky;top:96px;background:var(--white);border-radius:22px;box-shadow:0 0 0 1px var(--rule);padding:clamp(20px,2.4vw,28px)}
+.journey h3{font-size:clamp(1.6rem,2.4vw,2.2rem);font-weight:900;margin-top:6px}
+.legs{list-style:none;margin:18px 0 0;padding:0;position:relative}
+.legs::before{content:"";position:absolute;inset-block:14px;inset-inline-start:11px;width:4px;background:var(--rule)}
+.legs li{position:relative;display:flex;align-items:center;gap:14px;padding:10px 0;animation:rowin .4s var(--ease) both}
+.legs li:nth-child(2){animation-delay:.08s}.legs li:nth-child(3){animation-delay:.16s}.legs li:nth-child(4){animation-delay:.24s}
+@keyframes rowin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.legs .dot{position:relative;z-index:1;flex:none;width:26px;height:26px;border-radius:50%;background:var(--green);display:grid;place-items:center}
+.legs .dot svg{width:14px;height:14px}
+.legs .why{margin-inline-start:auto;font-family:var(--mono);font-size:12px;color:var(--soft);text-transform:uppercase}
+html[lang="ar"] .legs .why{font-family:var(--ar);text-transform:none}
+.journey p{margin:14px 0 0;color:var(--soft);font-size:.95rem}
+
+/* Tickets */
+.tickets{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+@media (max-width:1180px){.tickets{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:860px){.tickets{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:540px){.tickets{grid-template-columns:1fr}}
+.tkt{position:relative;background:var(--white);color:var(--ink);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;min-height:330px;transition:transform .35s var(--ease)}
+.tkt:hover{transform:translateY(-5px)}
+.tkt .stripe{height:12px}
+.tkt .in{padding:16px 18px 14px;display:flex;flex-direction:column;flex:1}
+.tkt .top{display:flex;justify-content:space-between;align-items:center}
+.tkt .line{display:inline-flex;align-items:center;gap:8px;font-weight:800}
+.tkt .line i{width:22px;height:22px;border-radius:50%;display:inline-block}
+.tkt h3{margin-top:12px;font-size:1.35rem;font-weight:900}
+.tkt .rows{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;font-weight:600;font-size:.92rem}
+.tkt .foot{margin-top:auto;padding-top:12px;display:flex;justify-content:space-between;align-items:flex-end;gap:10px}
+.tkt .win{font-size:.85rem;color:var(--soft);max-width:58%}
+.tkt .qr{width:80px;height:80px;flex:none}
+.tkt .mag{height:20px;background:repeating-linear-gradient(90deg,#2B3139 0 6px,#353C45 6px 9px)}
+.tkt.dead{background:#E6EAEE}
+.tkt.dead h3,.tkt.dead .rows,.tkt.dead .qr{opacity:.45}
+.tkt .void{position:absolute;top:44%;inset-inline-start:50%;transform:translateX(-50%) rotate(-10deg);border:4px solid var(--red);color:var(--red);border-radius:10px;padding:4px 14px;font-weight:900;font-size:1.4rem;text-transform:uppercase;background:rgba(255,255,255,.85);white-space:nowrap}
+html[dir="rtl"] .tkt .void{transform:translateX(50%) rotate(10deg)}
+.plate{display:inline-grid;grid-template-columns:auto auto;border:2px solid var(--ink);border-radius:6px;overflow:hidden;margin-top:6px;font-weight:700;font-size:.85rem}
+.plate span{padding:2px 8px}.plate span+span{border-inline-start:2px solid var(--ink);font-family:var(--ar)}
+.hint{margin-top:20px;color:#B8C2CC;font-size:.95rem}
+
+/* Ownership as a horizontal line */
+.timeline{position:relative;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(14px,2vw,28px)}
+.timeline::before{content:"";position:absolute;top:13px;inset-inline:0;height:8px;border-radius:4px;background:var(--purple)}
+.tl{position:relative;padding-top:48px}
+.tl::before{content:"";position:absolute;top:0;inset-inline-start:0;width:34px;height:34px;border-radius:50%;background:#fff;border:7px solid var(--ink);box-sizing:border-box}
+.tl .when{display:block}
+.tl h3{margin-top:6px}
+.tl p{margin:8px 0 0;color:var(--soft);font-size:.95rem}
+.pill{display:inline-flex;align-items:center;gap:8px;margin-top:12px;background:var(--ground);border-radius:999px;padding:5px 12px 5px 5px;font-weight:700;font-size:.88rem}
+.on-white .pill{background:var(--ground)}
+.pill i{width:26px;height:26px;border-radius:50%;background:var(--purple);color:#fff;display:grid;place-items:center;font-style:normal;font-family:var(--mono);font-size:.68rem}
+.fam{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.fam span{border:2px solid var(--rule);border-radius:999px;padding:2px 10px;font-size:.85rem;font-weight:600}
+@media (max-width:900px){.timeline{grid-template-columns:1fr 1fr}.timeline::before{display:none}}
+@media (max-width:520px){.timeline{grid-template-columns:1fr}}
+.audit{margin-top:30px;display:flex;flex-wrap:wrap;gap:6px 26px;padding:16px 20px;border-radius:14px;background:var(--ground)}
+.note{margin-top:10px;font-size:.82rem;color:var(--soft)}
+
+/* Services list */
+.services{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:clamp(20px,3vw,44px);border-top:2px solid var(--ink)}
+@media (max-width:1000px){.services{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:600px){.services{grid-template-columns:1fr}}
+.svc{display:grid;grid-template-columns:48px 1fr;gap:16px;padding:22px 0;border-bottom:1px solid var(--rule)}
+.svc .b{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;color:#fff}
+.svc .b svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.svc p{margin:4px 0 0;color:var(--soft);font-size:.93rem}
+
+/* Apps as line badges */
+.appl{display:grid;gap:12px}
+.app{display:grid;grid-template-columns:72px minmax(0,1fr) minmax(0,1.4fr) auto;gap:clamp(14px,2.4vw,32px);align-items:center;background:var(--ink-2);border-radius:18px;padding:18px 22px}
+.app .badge{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;font-weight:900;font-size:1.9rem;color:#fff}
+.app h3{font-size:1.4rem}
+.app .whoa{margin:2px 0 0;color:#B8C2CC;font-size:.93rem}
+.app .does{margin:0;color:#DDE3E9}
+.app .dev{font-family:var(--mono);font-size:12px;font-weight:700;text-transform:uppercase;background:#fff;color:var(--ink);border-radius:8px;padding:7px 12px;white-space:nowrap}
+html[lang="ar"] .app .dev{font-family:var(--ar);text-transform:none}
+@media (max-width:860px){.app{grid-template-columns:56px 1fr}.app .badge{width:52px;height:52px;font-size:1.5rem}.app .does,.app .dev{grid-column:1/-1}.app .dev{justify-self:start}}
+
+/* Egypt sign */
+.board{background:var(--blue);color:#fff;border-radius:24px;padding:clamp(28px,4vw,56px);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(20px,4vw,60px);align-items:center}
+.board h2{color:#fff}
+.board .ar-sign{font-family:var(--ar);font-weight:800;font-size:clamp(2.4rem,5.4vw,4.8rem);line-height:1.3;text-align:end;letter-spacing:0}
+@media (max-width:860px){.board{grid-template-columns:1fr}.board .ar-sign{text-align:start}}
+.truths{list-style:none;margin:28px 0 0;padding:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}
+@media (max-width:1100px){.truths{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.truths{grid-template-columns:1fr}}
+.truths li{background:var(--white);border-radius:16px;padding:18px;box-shadow:0 0 0 1px var(--rule)}
+.truths svg{width:30px;height:30px;fill:none;stroke:var(--blue);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.truths h3{margin-top:12px;font-size:1.05rem}
+.truths p{margin:6px 0 0;color:var(--soft);font-size:.9rem}
+
+/* Contact */
+.contact-grid{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.2fr);gap:clamp(30px,5vw,80px);align-items:start}
+@media (max-width:980px){.contact-grid{grid-template-columns:1fr}}
+.direct{margin-top:24px}
+.direct a{font-weight:800;color:var(--blue)}
+.form{background:var(--white);border-radius:24px;box-shadow:0 0 0 1px var(--rule),0 30px 60px -40px rgba(20,40,60,.35);padding:clamp(22px,3vw,36px);position:relative;overflow:hidden}
+.form::before{content:"";position:absolute;inset:0 0 auto;height:8px;background:linear-gradient(90deg,var(--red) 0 25%,var(--yellow) 25% 50%,var(--green) 50% 75%,var(--purple) 75%)}
+.form-head{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.form-head .t{font-weight:900;font-size:1.5rem}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.fgrid .full{grid-column:1/-1}
+@media (max-width:560px){.fgrid{grid-template-columns:1fr}}
+.f label{display:block;margin-bottom:6px}
+.f input,.f select,.f textarea{width:100%;font:inherit;font-size:1rem;color:var(--ink);background:var(--ground);border:2px solid var(--ground);border-radius:12px;padding:12px 14px;transition:border-color .2s,background-color .2s;accent-color:var(--blue)}
+.f textarea{min-height:110px;resize:vertical}
+.f input::placeholder,.f textarea::placeholder{color:#6B7580}
+.f input:hover,.f select:hover,.f textarea:hover{border-color:var(--rule)}
+.f input:focus,.f select:focus,.f textarea:focus{outline:none;border-color:var(--blue);background:#fff}
+.f.bad input,.f.bad select,.f.bad textarea{border-color:var(--red);background:#FFF2F4}
+.f .err{display:none;margin-top:6px;font-size:.85rem;color:#B30022;font-weight:600}
+.f.bad .err{display:block}
+.f select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231B1F24' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;background-size:18px;padding-inline-end:40px}
+html[dir="rtl"] .f select{background-position:left 12px center}
+.form-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;margin-top:22px}
+.form-foot small{color:var(--soft);max-width:34ch}
+.sent{display:none}
+.form.done .sent{display:block;animation:rowin .5s var(--ease) both}
+.form.done form{display:none}
+.sent .big{display:inline-flex;align-items:center;gap:8px;background:var(--green);color:var(--ink);border-radius:999px;padding:6px 16px;font-weight:800;margin-bottom:14px}
+.sent h3{font-size:1.8rem;font-weight:900}
+.sent p{color:var(--soft)}
+
+footer{background:var(--ink);color:#B8C2CC;padding-block:40px;position:relative}
+footer::before{content:"";position:absolute;inset:0 0 auto;height:5px;background:linear-gradient(90deg,var(--red) 0 25%,var(--yellow) 25% 50%,var(--green) 50% 75%,var(--purple) 75%)}
+footer .wrap{display:flex;flex-wrap:wrap;gap:16px 36px;align-items:center;justify-content:space-between}
+footer .brand{color:#fff}
+footer nav{display:flex;flex-wrap:wrap;gap:8px 22px}
+footer a{text-decoration:none}footer a:hover{color:#fff}
+
+.js .rise{opacity:0;transform:translateY(20px);transition:opacity .7s var(--ease),transform .7s var(--ease)}
+.js .rise.in{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){.js .rise{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<a class="skip" href="#main" data-i18n="skip">Skip to content</a>
+<header class="nav" id="nav">
+  <div class="nav-in">
+    <a class="brand" href="#top" dir="ltr" aria-label="kmpndi home"><span class="roundel" aria-hidden="true"></span>kmpndi</a>
+    <nav class="nav-links" aria-label="Main">
+      <a href="#how" data-i18n="nav.how">How it works</a>
+      <a href="#passes" data-i18n="nav.passes">Passes</a>
+      <a href="#everything" data-i18n="nav.all">The whole compound</a>
+      <a href="#apps" data-i18n="nav.apps">Apps</a>
+    </nav>
+    <button class="lang" id="lang" type="button">عربي</button>
+    <a class="btn btn-blue" href="#contact"><span data-i18n="nav.cta">Talk to us</span><svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+  </div>
+</header>
+
+<main id="main">
+<section class="hero" id="top" aria-labelledby="hero-title" style="padding-top:calc(73px + clamp(16px,2.4vh,28px))">
+  <div class="hero-stack">
+    <div class="screen">
+      <video id="film" autoplay muted loop playsinline preload="auto" poster="assets/hero-poster.jpg" aria-label="kmpndi film: the compound drawn as a line map; a guest pass travels from the main gate to villa V-14 and each gate on the way opens."><source src="assets/hero.mp4" type="video/mp4"></video>
+      <div class="film-ctrl">
+        <button class="film-btn" id="filmToggle" type="button" aria-pressed="false">
+          <svg id="icPause" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+          <svg id="icPlay" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" hidden><path d="M7 5l12 7-12 7z"/></svg>
+          <span data-i18n="film.pause">Pause film</span>
+        </button>
+        <button class="film-btn" id="filmFull" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span data-i18n="v3.full">Full screen</span></button>
+      </div>
+    </div>
+    <div class="sign">
+      <span class="roundel" aria-hidden="true"></span>
+      <h1 id="hero-title" data-i18n="hero.title">The compound that runs itself.</h1>
+      <a class="btn btn-white" href="#contact"><span data-i18n="hero.cta">Talk to the kmpndi team</span><svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+    </div>
+    <p class="hero-lede" data-i18n-html="hero.lede">kmpndi turns your compound's map (zones, buildings, units, owners) into live gate access. <strong>Residents issue their own QR passes. Guards scan. You stop managing lists.</strong></p>
+  </div>
+</section>
+
+<div class="route-line" aria-hidden="true"></div>
+
+<section class="on-white" id="today" aria-labelledby="today-title">
+  <span class="stop" aria-hidden="true"></span>
+  <div class="wrap">
+    <div class="head"><h2 id="today-title" class="rise" data-i18n="today.title">Your gate still runs on paper.</h2><p class="lede" data-i18n="today.lede">Guest lists on WhatsApp. Worker cards nobody checks. Tenants who moved out months ago and still wave their way in. The guard does their best with what they're given, and what they're given is guesswork.</p></div>
+    <div class="notices rise">
+      <div class="notice"><span class="label" data-i18n="today.w1">Guest · 21:10</span><h3 data-i18n="today.h1">A blurry photo of an ID card</h3><p data-i18n="today.p1">Forwarded three times on WhatsApp. The guard can't tell whose guest it is.</p><span class="status" data-i18n="today.s1">Unreadable</span></div>
+      <div class="notice"><span class="label" data-i18n="today.w2">Worker · 07:45</span><h3 data-i18n="today.h2">A laminated card from last year</h3><p data-i18n="today.p2">The contract ended, but the card still gets a nod at the gate.</p><span class="status" data-i18n="today.s2">Expired</span></div>
+      <div class="notice"><span class="label" data-i18n="today.w3">Former tenant · 18:30</span><h3 data-i18n="today.h3">A face the guard remembers</h3><p data-i18n="today.p3">The lease ended in spring. Nobody told the gate.</p><span class="status" data-i18n="today.s3">Revoked?</span></div>
+      <div class="notice"><span class="label" data-i18n="today.w4">Delivery · 13:05</span><h3 data-i18n="today.h4">Three calls to three villas</h3><p data-i18n="today.p4">Nobody answers, the order waits at the barrier, and the resident is angry.</p><span class="status" data-i18n="today.s4">Unknown</span></div>
+    </div>
+    <p class="today-close rise" data-i18n-html="today.close">kmpndi replaces the guesswork with <em>one rule the gate can check</em>: who owns or lives in the unit, and who they said may come in.</p>
+  </div>
+</section>
+
+<section id="how" aria-labelledby="how-title">
+  <span class="stop" aria-hidden="true" style="border-color:var(--yellow)"></span>
+  <div class="wrap">
+    <div class="head"><h2 id="how-title" class="rise" data-i18n="how.title">Map it once. Access inherits.</h2><p class="lede" data-i18n-html="how.lede">You draw your compound in the admin app: gates, zones inside zones, buildings, units. <strong>Grant a unit and kmpndi opens its building, every zone around it, and the main gate.</strong> Try it: pick a unit.</p></div>
+    <div class="inherit">
+      <div class="diagram rise" id="diagram"><svg id="net" viewBox="0 0 640 520" direction="ltr" style="direction:ltr" role="group" aria-label="Example compound network"></svg></div>
+      <aside class="journey" aria-live="polite">
+        <div class="label" data-i18n="how.grant">Access granted to</div>
+        <h3 id="grantTitle">Villa V-14</h3>
+        <ul class="legs" id="opens"></ul>
+        <p id="grantNote"></p>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<section class="on-ink" id="passes" aria-labelledby="passes-title">
+  <span class="stop" aria-hidden="true" style="border-color:var(--green)"></span>
+  <div class="wrap">
+    <div class="head"><h2 id="passes-title" class="rise" data-i18n="passes.title">One pass for every kind of visit.</h2><p class="lede" data-i18n-html="passes.lede">Residents create them in the app and send them on WhatsApp. Every pass comes from the resident's own right, so <strong>it can never outlast it</strong>. The gate checks the window, not the guard's memory.</p></div>
+    <div class="tickets" id="tickets"></div>
+    <p class="hint" data-i18n="passes.hint">The last three are what the gate sees when a pass isn't good.</p>
+  </div>
+</section>
+
+<section class="on-white" id="ownership" aria-labelledby="own-title">
+  <span class="stop" aria-hidden="true" style="border-color:var(--purple)"></span>
+  <div class="wrap">
+    <div class="head"><h2 id="own-title" class="rise" data-i18n="own.title">Sell a unit. The keys change hands.</h2><p class="lede" data-i18n="own.lede">Access in kmpndi comes from ownership and occupancy, recorded like a title deed. When a unit is sold or leased, the right people gain access and the wrong people lose it, automatically. Nobody has to remember to update the gate.</p></div>
+    <div class="timeline rise">
+      <div class="tl"><span class="label when" data-i18n="own.w1">Day 0 · handover</span><h3 data-i18n="own.h1">The developer owns every unit</h3><p data-i18n="own.p1">Every unit starts with the developer on the record.</p><span class="pill"><i>PD</i><span data-i18n="own.d1">Developer</span></span></div>
+      <div class="tl"><span class="label when" data-i18n="own.w2">Sale recorded</span><h3 data-i18n="own.h2">Ownership moves to the buyer</h3><p data-i18n="own.p2">kmpndi makes the buyer the resident and gives them access to the unit, its zone and the main gate.</p><span class="pill"><i>NH</i><span data-i18n="own.d2">Nour Hassan · owner</span></span></div>
+      <div class="tl"><span class="label when" data-i18n="own.w3">Family added</span><h3 data-i18n="own.h3">Her family gets in too</h3><p data-i18n="own.p3">Each family member gets their own access, and it ends the day they leave the family.</p><div class="fam"><span data-i18n="own.f1">Spouse</span><span data-i18n="own.f2">Son</span><span data-i18n="own.f3">Daughter</span><span data-i18n="own.f4">Mother</span></div></div>
+      <div class="tl"><span class="label when" data-i18n="own.w4">Leased</span><h3 data-i18n="own.h4">The tenant takes over the gate</h3><p data-i18n="own.p4">While a tenant lives there, only the tenant can invite guests. The owner's access pauses and comes back when the lease ends.</p><span class="pill"><i>KS</i><span data-i18n="own.d4">Karim Saleh · tenant</span></span></div>
+    </div>
+    <div class="audit"><span data-i18n-html="own.a1"><b>Every change is recorded:</b> who granted what, to whom, and when.</span><span data-i18n="own.a2">Companies work the same way: their admins manage their staff's access.</span></div>
+    <p class="note" data-i18n="own.note">Names are illustrative.</p>
+  </div>
+</section>
+
+<section id="everything" aria-labelledby="all-title">
+  <span class="stop" aria-hidden="true" style="border-color:var(--blue)"></span>
+  <div class="wrap">
+    <div class="head"><h2 id="all-title" class="rise" data-i18n="all.title">The rest of compound life rides the same rights.</h2><p class="lede" data-i18n="all.lede">Once kmpndi knows who lives where, everything else in the compound runs on that record: the pool, the pharmacy, the broken AC, the second car.</p></div>
+    <div class="services" id="services"></div>
+  </div>
+</section>
+
+<section class="on-ink" id="apps" aria-labelledby="apps-title">
+  <span class="stop" aria-hidden="true" style="border-color:var(--yellow)"></span>
+  <div class="wrap">
+    <div class="head"><h2 id="apps-title" class="rise" data-i18n="apps.title">Four apps. One set of rights.</h2><p class="lede" data-i18n="apps.lede">Each person gets the app for their job, and every app reads the same ownership and access record.</p></div>
+    <div class="appl" id="appl"></div>
+  </div>
+</section>
+
+<section id="egypt" aria-labelledby="egypt-title">
+  <span class="stop" aria-hidden="true" style="border-color:var(--green)"></span>
+  <div class="wrap">
+    <div class="board rise"><h2 id="egypt-title" data-i18n="egypt.title">Made for how Egyptian compounds work.</h2><div class="ar-sign" id="egyptAlt" lang="ar" dir="rtl">صُنع لكمبوندات مصر</div></div>
+    <ul class="truths" id="truths"></ul>
+  </div>
+</section>
+
+<section class="on-white" id="contact" aria-labelledby="contact-title">
+  <span class="stop" aria-hidden="true" style="border-color:var(--red);background:var(--red)"></span>
+  <div class="wrap contact-grid">
+    <div>
+      <h2 id="contact-title" class="rise" data-i18n="contact.title">Put your compound on kmpndi.</h2>
+      <p class="lede" style="margin-top:22px" data-i18n="contact.lede">Tell us about your compound. The kmpndi team will walk you through setup. If you'd rather not map it yourself, we can import it from your spreadsheets.</p>
+      <p class="direct"><span class="label" data-i18n="contact.or">Or write directly</span><br><a href="mailto:sales@kmpndi.com">sales@kmpndi.com</a></p>
+    </div>
+    <div class="form" id="formCard">
+      <form id="leadForm" novalidate>
+        <div class="form-head"><span class="roundel" aria-hidden="true"></span><span class="t" data-i18n="form.t">Onboarding request</span></div>
+        <div class="fgrid">
+          <div class="f"><label class="label" for="fName" data-i18n="form.name">Your name</label><input id="fName" autocomplete="name" required><div class="err" data-i18n="form.eName">Add your name so we know who to ask for.</div></div>
+          <div class="f"><label class="label" for="fCompany" data-i18n="form.company">Developer / company</label><input id="fCompany" autocomplete="organization" required><div class="err" data-i18n="form.eCompany">Add the developer or company name.</div></div>
+          <div class="f"><label class="label" for="fCompound" data-i18n="form.compound">Compound name</label><input id="fCompound"></div>
+          <div class="f"><label class="label" for="fUnits" data-i18n="form.units">Number of units</label><select id="fUnits"><option value="" data-i18n="form.u0">Choose a range</option><option value="Under 500" data-i18n="form.u1">Under 500</option><option value="500 – 2,000" data-i18n="form.u2">500 – 2,000</option><option value="2,000 – 5,000" data-i18n="form.u3">2,000 – 5,000</option><option value="5,000+" data-i18n="form.u4">5,000 or more</option></select></div>
+          <div class="f"><label class="label" for="fPhone" data-i18n="form.phone">Phone / WhatsApp</label><input id="fPhone" type="tel" autocomplete="tel" placeholder="+20 10 0000 0000" dir="ltr"></div>
+          <div class="f"><label class="label" for="fEmail" data-i18n="form.email">Email</label><input id="fEmail" type="email" autocomplete="email" required dir="ltr"><div class="err" data-i18n="form.eEmail">Enter an email we can reply to, like name@company.com.</div></div>
+          <div class="f full"><label class="label" for="fMsg" data-i18n="form.msg">What should we know?</label><textarea id="fMsg" data-i18n-ph="form.msgph" placeholder="Gates, current system, when you're handing over units…"></textarea></div>
+        </div>
+        <div class="form-foot"><small data-i18n="form.note">Sending opens your email app with the message ready to send to the kmpndi team.</small>
+          <button class="btn btn-blue" type="submit"><span data-i18n="form.send">Send to the kmpndi team</span><svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></div>
+      </form>
+      <div class="sent" role="status"><span class="big" data-i18n="sent.stamp">Issued</span><h3 data-i18n="sent.t">Your email is ready to send.</h3><p data-i18n-html="sent.p">We've opened your email app with the message filled in. Press send there. If nothing opened, write to <a href="mailto:sales@kmpndi.com">sales@kmpndi.com</a>.</p><button class="btn btn-line" type="button" id="again" data-i18n="sent.again">Edit the request</button></div>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer><div class="wrap"><a class="brand" href="#top" dir="ltr"><span class="roundel" aria-hidden="true"></span>kmpndi</a><nav aria-label="Footer"><a href="#how" data-i18n="nav.how">How it works</a><a href="#everything" data-i18n="nav.all">The whole compound</a><a href="#contact" data-i18n="nav.cta">Talk to us</a><a href="mailto:sales@kmpndi.com">sales@kmpndi.com</a></nav><span>© 2026 kmpndi</span></div></footer>
+
+<script src="../shared/kmpndi-content.js"></script>
+<script>
+(function(){
+var K=window.KMP,L=K.L;
+var C={red:'#E4002B',yellow:'#FFB81C',green:'#00A650',purple:'#7D4FC1',blue:'#0072CE'};
+/* Network geometry (viewBox 640×520). The main gate is the capsule on the left. */
+var LN=[{id:'yellow',c:C.yellow,d:'M55 80H560'},{id:'red',c:C.red,d:'M55 190H470'},{id:'red2',c:C.red,d:'M200 190L270 260H500'},{id:'green',c:C.green,d:'M55 360H440'},{id:'purple',c:C.purple,d:'M55 440H360'}];
+var ZONES=[
+ {z:'twr',x:170,y:80,c:C.yellow,t:L('Tower A2 · lobby','برج A2 · المدخل')},
+ {z:'vzb',x:170,y:190,c:C.red,t:L('Villa Zone B','منطقة الفيلات B')},
+ {z:'vip',x:300,y:260,c:C.red,t:L('VIP Zone','منطقة VIP'),below:true},
+ {z:'club',x:170,y:360,c:C.green,t:L('Clubhouse','النادي')},
+ {z:'shops',x:170,y:440,c:C.purple,t:L('Shops','المحلات')}
+];
+var STN=[
+ {u:'A2-3',x:270,y:80},{u:'A2-7',x:360,y:80},{u:'A2-12',x:450,y:80},{u:'A2-18',x:540,y:80},
+ {u:'V-03',x:270,y:190},{u:'V-05',x:360,y:190},{u:'V-08',x:450,y:190},
+ {u:'V-14',x:400,y:260},{u:'V-16',x:490,y:260},
+ {u:'POOL',x:290,y:360,t:L('Pool','حمام السباحة')},{u:'GYM',x:410,y:360,t:L('Gym','الجيم')},
+ {u:'SHOP-3',x:320,y:440,t:L('Pharmacy','صيدلية')}
+];
+function routeFor(u){var s=STN.filter(function(x){return x.u===u})[0];var c=K.UNITS[u].chain;
+ if(c.indexOf('vip')>-1)return {c:C.red,d:'M55 190H200L270 260H'+s.x};
+ if(c.indexOf('vzb')>-1)return {c:C.red,d:'M55 190H'+s.x};
+ if(c.indexOf('twr')>-1)return {c:C.yellow,d:'M55 80H'+s.x};
+ if(c.indexOf('club')>-1)return {c:C.green,d:'M55 360H'+s.x};
+ return {c:C.purple,d:'M55 440H'+s.x}}
+var current='V-14';
+function drawNet(tx,lang){
+ var h='';
+ LN.forEach(function(l){h+='<path class="ln" d="'+l.d+'" stroke="'+l.c+'"/>'});
+ h+='<path class="route" id="route" d="" pathLength="1" stroke-dasharray="1"/>';
+ h+='<rect class="cap" id="cap" x="30" y="50" width="50" height="420" rx="25"/>';
+ h+='<text class="cap-l" x="18" y="505">'+(lang==='ar'?'البوابة الرئيسية A':'Main Gate A')+'</text>';
+ ZONES.forEach(function(z){h+='<g class="zst" data-z="'+z.z+'"><circle class="o" cx="'+z.x+'" cy="'+z.y+'" r="17"/><circle class="i" cx="'+z.x+'" cy="'+z.y+'" r="7"/><text x="'+(z.below?z.x-26:z.x-14)+'" y="'+(z.below?z.y+44:z.y-26)+'"'+(z.below?' text-anchor="end"':'')+'>'+tx(z.t)+'</text></g>'});
+ STN.forEach(function(s){var name=s.t?tx(s.t):s.u;h+='<g class="stn" tabindex="0" role="button" aria-pressed="false" data-u="'+s.u+'" aria-label="'+name+'"><circle cx="'+s.x+'" cy="'+s.y+'" r="13"/><text x="'+s.x+'" y="'+(s.y+40)+'" text-anchor="middle">'+name+'</text></g>'});
+ var net=document.getElementById('net');net.innerHTML=h;
+ net.querySelectorAll('.stn').forEach(function(g){g.addEventListener('click',function(){grant(g.dataset.u,K.tx,K.getLang())});g.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();grant(g.dataset.u,K.tx,K.getLang())}})});
+}
+var TICK='<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>';
+function grant(u,tx,lang){current=u;var d=K.UNITS[u],r=routeFor(u),rt=document.getElementById('route');
+ document.getElementById('diagram').classList.add('routing');
+ rt.setAttribute('d',r.d);rt.setAttribute('stroke',r.c);rt.classList.remove('draw');void rt.getBoundingClientRect();rt.classList.add('draw');
+ document.querySelectorAll('.stn').forEach(function(g){g.setAttribute('aria-pressed',g.dataset.u===u?'true':'false')});
+ document.querySelectorAll('.zst').forEach(function(g){g.classList.toggle('open',d.chain.indexOf(g.dataset.z)>-1)});
+ document.getElementById('cap').classList.add('open');
+ document.getElementById('grantTitle').textContent=tx(d.t);
+ var rows=[{t:tx(d.t),why:lang==='ar'?'الملكية':'Ownership'}].concat(d.doors.map(function(x){return {t:tx(x),why:lang==='ar'?'متوارث':'Inherited'}}));
+ document.getElementById('opens').innerHTML=rows.map(function(r){return '<li><span class="dot">'+TICK+'</span><span>'+r.t+'</span><span class="why">'+r.why+'</span></li>'}).join('');
+ document.getElementById('grantNote').textContent=tx(d.note)}
+var TLINE={Guest:C.blue,Worker:C.yellow,Delivery:C.purple,Vehicle:C.green,Family:C.red,Tenant:'#8A96A3'};
+var SVC=[C.green,C.purple,C.yellow,C.blue,C.red,C.blue,C.red,C.ink||'#1B1F24',C.green,C.red,C.blue,C.purple];
+var APPC=[C.red,C.green,C.blue,C.purple];
+window.KMP_PAGE={
+ ar:{'v3.full':'ملء الشاشة'},
+ render:function(tx,lang){
+  drawNet(tx,lang);
+  document.getElementById('tickets').innerHTML=K.PASSES.map(function(p){var c=p.dead?'#8A96A3':(TLINE[p.cls.en]||C.blue);
+   return '<article class="tkt'+(p.dead?' dead':'')+'"><div class="stripe" style="background:'+c+'"></div><div class="in"><div class="top"><span class="line"><i style="background:'+c+'"></i>'+tx(p.cls)+'</span><span class="label" dir="ltr">KMP-'+(1000+p.seed*37)+'</span></div>'+
+   '<h3>'+tx(p.name)+'</h3>'+(p.plate?'<div class="plate"><span>ABC 123</span><span lang="ar">أ ب ج ١٢٣</span></div>':'')+
+   '<div class="rows">'+p.rows.map(function(r){return '<div><div class="label">'+tx(r[0])+'</div>'+tx(r[1])+'</div>'}).join('')+'</div>'+
+   '<div class="foot"><div class="win">'+tx(p.win)+'</div>'+K.qr(p.seed,'#1B1F24')+'</div></div><div class="mag"></div>'+(p.dead?'<div class="void">'+tx(p.stamp)+'</div>':'')+'</article>'}).join('');
+  document.getElementById('services').innerHTML=K.MODS.map(function(m,i){return '<div class="svc"><span class="b" style="background:'+SVC[i]+'"><svg viewBox="0 0 24 24" aria-hidden="true">'+K.IC[m.k]+'</svg></span><div><h3>'+tx(m.t)+'</h3><p>'+tx(m.p)+'</p></div></div>'}).join('');
+  document.getElementById('appl').innerHTML=K.APPS.map(function(a,i){return '<article class="app"><span class="badge" style="background:'+APPC[i]+'" aria-hidden="true">'+a.code+'</span><div><h3>'+tx(a.t)+'</h3><p class="whoa">'+tx(a.who)+'</p></div><p class="does">'+tx(a.does)+'</p><span class="dev">'+tx(a.dev)+'</span></article>'}).join('');
+  document.getElementById('truths').innerHTML=K.TRUTHS.map(function(t){return '<li><svg viewBox="0 0 24 24" aria-hidden="true">'+K.IC[t.i]+'</svg><h3>'+tx(t.t)+'</h3><p>'+tx(t.p)+'</p></li>'}).join('');
+  var alt=document.getElementById('egyptAlt');alt.textContent=lang==='ar'?'Made for Egypt.':'صُنع لكمبوندات مصر';alt.lang=lang==='ar'?'en':'ar';alt.dir=lang==='ar'?'ltr':'rtl';alt.style.fontFamily=lang==='ar'?'var(--sans)':'';
+  grant(current,tx,lang);
+ }
+};
+})();
+</script>
+<script src="../shared/kmpndi-core.js"></script>
+</body>
+</html>
